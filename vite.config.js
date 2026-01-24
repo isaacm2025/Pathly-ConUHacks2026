@@ -6,7 +6,10 @@ export default defineConfig({
   logLevel: "error", // Suppress warnings, only show errors
   server: {
     port: 5173,
-    strictPort: true
+    strictPort: true,
+    proxy: {
+      "/api": "http://localhost:3001"
+    }
   },
   plugins: [
     base44({
