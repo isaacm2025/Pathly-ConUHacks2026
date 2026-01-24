@@ -12,8 +12,6 @@ import DestinationBar from "../components/night/DestinationBar";
 import SafetyAlert from "../components/night/SafetyAlert";
 import useStreetActivity from "../hooks/useStreetActivity";
 
-<<<<<<< Updated upstream
-=======
 // Mock data for demonstration
 const montrealCenter = [45.5019, -73.5674];
 const montrealBounds = {
@@ -42,32 +40,31 @@ const mockPlaces = [
 ];
 
 const mockRoutes = [
-  { 
-    id: "1", 
-    type: "safest", 
-    eta: 14, 
+  {
+    id: "1",
+    type: "safest",
+    eta: 14,
     safetyScore: 94,
     description: "More lighting and active streets",
     path: [[45.5019, -73.5674], [45.5045, -73.5738], [45.5070, -73.5710], [45.5095, -73.5670]]
   },
-  { 
-    id: "2", 
-    type: "balanced", 
-    eta: 11, 
+  {
+    id: "2",
+    type: "balanced",
+    eta: 11,
     safetyScore: 82,
     description: "Good balance of speed and safety",
     path: [[45.5019, -73.5674], [45.5035, -73.5630], [45.5065, -73.5640], [45.5095, -73.5670]]
   },
-  { 
-    id: "3", 
-    type: "fastest", 
-    eta: 8, 
+  {
+    id: "3",
+    type: "fastest",
+    eta: 8,
     safetyScore: 68,
     description: "Shortest path, some quieter areas",
     path: [[45.5019, -73.5674], [45.5055, -73.5660], [45.5095, -73.5670]]
   },
 ];
->>>>>>> Stashed changes
 
 const mockDestination = {
   label: "Home",
@@ -92,7 +89,7 @@ export default function Home() {
   const [routes, setRoutes] = useState([]);
   const isDark = mode === "night";
   const scopedLocation = isWithinMontreal(liveLocation) ? liveLocation : montrealCenter;
-  
+
   // Simulate live updates
   useEffect(() => {
     const interval = setInterval(() => {
@@ -100,7 +97,7 @@ export default function Home() {
     }, 30000);
     return () => clearInterval(interval);
   }, []);
-  
+
   // Show safety alert periodically in night mode
   useEffect(() => {
     if (isDark) {
@@ -111,19 +108,19 @@ export default function Home() {
       return () => clearTimeout(timeout);
     }
   }, [isDark]);
-  
+
   const handleModeToggle = () => {
     setMode(mode === "day" ? "night" : "day");
   };
-  
+
   const handleFilterToggle = (filterId) => {
-    setActiveFilters(prev => 
-      prev.includes(filterId) 
+    setActiveFilters(prev =>
+      prev.includes(filterId)
         ? prev.filter(f => f !== filterId)
         : [...prev, filterId]
     );
   };
-  
+
   const handleSafetyToggle = (toggleId) => {
     setSafetyToggles(prev =>
       prev.includes(toggleId)
@@ -131,24 +128,24 @@ export default function Home() {
         : [...prev, toggleId]
     );
   };
-  
+
   // No extra filtering for unsupported criteria; just show all results from Google
   const sortedPlaces = places;
 
   const selectedRoute = routes.find(r => r.id === selectedRouteId);
-  
+
   return (
     <div className={`
       min-h-screen transition-colors duration-500
       ${isDark ? "bg-slate-900" : "bg-slate-50"}
     `}>
-      <TopBar 
+      <TopBar
         mode={mode}
         onModeToggle={handleModeToggle}
         lastUpdate={lastUpdate}
         isDark={isDark}
       />
-      
+
       <AnimatePresence mode="wait">
         {mode === "day" ? (
           <motion.div
@@ -162,24 +159,24 @@ export default function Home() {
             {/* Left Panel - Places */}
             <div className="w-[420px] flex flex-col flex-shrink-0">
               <div className="mb-4">
-                <FilterChips 
+                <FilterChips
                   activeFilters={activeFilters}
                   onToggle={handleFilterToggle}
                 />
               </div>
-              
+
               <div className="flex-1 overflow-y-auto pr-1 -mr-1">
-                <PlacesList 
+                <PlacesList
                   places={sortedPlaces}
                   highlightedId={highlightedId}
                   onHover={setHighlightedId}
                 />
               </div>
             </div>
-            
+
             {/* Right Panel - Map */}
             <div className="flex-1">
-              <MapView 
+              <MapView
                   places={sortedPlaces}
                   highlightedId={highlightedId}
                   onMarkerHover={setHighlightedId}
@@ -206,21 +203,21 @@ export default function Home() {
             className="flex flex-row gap-4 p-4 h-[calc(100vh-64px)]"
           >
             {/* Safety Alert */}
-            <SafetyAlert 
+            <SafetyAlert
               message="Entering lower-activity area in 120m"
               isVisible={showAlert}
             />
-            
+
             {/* Left Panel - Routes */}
             <div className="w-[400px] flex flex-col gap-4 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-white">Routes</h2>
-                <SafetyToggles 
+                <SafetyToggles
                   active={safetyToggles}
                   onToggle={handleSafetyToggle}
                 />
               </div>
-              
+
               <div className="space-y-3 overflow-y-auto pr-1 -mr-1">
                 {routes.map((route) => (
                   <RouteCard
@@ -232,10 +229,10 @@ export default function Home() {
                 ))}
               </div>
             </div>
-            
+
             {/* Right Panel - Map */}
             <div className="flex-1">
-              <MapView 
+              <MapView
                 isDark={true}
                 routes={mockRoutes}
                 userLocation={scopedLocation}
@@ -251,9 +248,9 @@ export default function Home() {
               )}
               {locationError && <div style={{ color: 'red', textAlign: 'center' }}>{locationError}</div>}
             </div>
-            
+
             {/* Destination Bar */}
-            <DestinationBar 
+            <DestinationBar
               destination={mockDestination}
               eta={selectedRoute?.eta}
               routeType={selectedRoute?.type}
