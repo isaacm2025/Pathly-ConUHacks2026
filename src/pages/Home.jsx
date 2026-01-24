@@ -11,9 +11,6 @@ import SafetyToggles from "../components/night/SafetyToggles";
 import DestinationBar from "../components/night/DestinationBar";
 import SafetyAlert from "../components/night/SafetyAlert";
 import useStreetActivity from "../hooks/useStreetActivity";
-
-<<<<<<< Updated upstream
-=======
 // Mock data for demonstration
 const montrealCenter = [45.5019, -73.5674];
 const montrealBounds = {
@@ -67,7 +64,6 @@ const mockRoutes = [
     path: [[45.5019, -73.5674], [45.5055, -73.5660], [45.5095, -73.5670]]
   },
 ];
->>>>>>> Stashed changes
 
 const mockDestination = {
   label: "Home",
@@ -77,10 +73,7 @@ const mockDestination = {
 
 export default function Home() {
   const { location: liveLocation, error: locationError } = useLiveLocation(montrealCenter);
-  const { streetActivity, error: streetError } = useStreetActivity({
-    bounds: montrealBounds,
-    center: montrealCenter,
-  });
+  const { streetActivity, error: streetError } = useStreetActivity();
   const [mode, setMode] = useState("day");
   const [activeFilters, setActiveFilters] = useState([]);
   const [highlightedId, setHighlightedId] = useState(null);
@@ -238,6 +231,8 @@ export default function Home() {
               <MapView 
                 isDark={true}
                 routes={mockRoutes}
+                highlightedId={highlightedId}
+                onMarkerHover={setHighlightedId}
                 userLocation={scopedLocation}
                 destination={mockDestination}
                 mapCenter={montrealCenter}
