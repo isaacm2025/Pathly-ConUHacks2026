@@ -132,10 +132,10 @@ export default function Home() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="flex flex-col lg:flex-row gap-4 p-4 h-[calc(100vh-64px)]"
+            className="flex flex-row gap-4 p-4 h-[calc(100vh-64px)]"
           >
             {/* Left Panel - Places */}
-            <div className="lg:w-[400px] flex flex-col">
+            <div className="w-[420px] flex flex-col flex-shrink-0">
               <div className="mb-4">
                 <FilterChips 
                   activeFilters={activeFilters}
@@ -153,7 +153,7 @@ export default function Home() {
             </div>
             
             {/* Right Panel - Map */}
-            <div className="flex-1 min-h-[300px] lg:min-h-0">
+            <div className="flex-1">
               <MapView 
                 places={sortedPlaces}
                 highlightedId={highlightedId}
@@ -169,7 +169,7 @@ export default function Home() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="flex flex-col lg:flex-row gap-4 p-4 h-[calc(100vh-64px)]"
+            className="flex flex-row gap-4 p-4 h-[calc(100vh-64px)]"
           >
             {/* Safety Alert */}
             <SafetyAlert 
@@ -178,7 +178,7 @@ export default function Home() {
             />
             
             {/* Left Panel - Routes */}
-            <div className="lg:w-[380px] flex flex-col gap-4">
+            <div className="w-[400px] flex flex-col gap-4 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-white">Routes</h2>
                 <SafetyToggles 
@@ -187,7 +187,7 @@ export default function Home() {
                 />
               </div>
               
-              <div className="space-y-3">
+              <div className="space-y-3 overflow-y-auto pr-1 -mr-1">
                 {mockRoutes.map((route) => (
                   <RouteCard
                     key={route.id}
@@ -200,7 +200,7 @@ export default function Home() {
             </div>
             
             {/* Right Panel - Map */}
-            <div className="flex-1 min-h-[300px] lg:min-h-0">
+            <div className="flex-1">
               <MapView 
                 isDark={true}
                 routes={mockRoutes}
