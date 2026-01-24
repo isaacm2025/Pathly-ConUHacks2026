@@ -19,13 +19,14 @@ export default function ModeToggle({ mode, onToggle }) {
       <motion.div
         initial={false}
         animate={{
-          x: isDay ? 0 : 40,
+          x: isDay ? "0%" : "100%",
         }}
         transition={{ type: "spring", stiffness: 500, damping: 30 }}
         className={`
-          absolute left-0.5 top-0.5 bottom-0.5 w-10 rounded-full
+          absolute left-0 top-0.5 bottom-0.5 rounded-full
           ${isDay ? "bg-white shadow-sm" : "bg-slate-600"}
         `}
+        style={{ width: "calc(50% - 2px)" }}
       />
       
       <span className={`relative z-10 flex items-center gap-1.5 text-sm font-medium ${isDay ? "opacity-100" : "opacity-50"}`}>
