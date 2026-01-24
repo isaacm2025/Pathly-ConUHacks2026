@@ -11,6 +11,8 @@ import RouteCard from "../components/night/RouteCard";
 import SafetyToggles from "../components/night/SafetyToggles";
 import DestinationBar from "../components/night/DestinationBar";
 import SafetyAlert from "../components/night/SafetyAlert";
+import TurnByTurnPanel from "../components/night/TurnByTurnPanel";
+import ShareRouteModal from "../components/night/ShareRouteModal";
 import useStreetActivity from "../hooks/useStreetActivity";
 // Mock data for demonstration
 const montrealCenter = [45.5019, -73.5674];
@@ -83,6 +85,7 @@ export default function Home() {
   const [safetyToggles, setSafetyToggles] = useState(["well_lit", "busy_areas"]);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [showAlert, setShowAlert] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [places, setPlaces] = useState([]);
   const [routes, setRoutes] = useState([]);
   const isDark = mode === "night";
@@ -234,26 +237,44 @@ export default function Home() {
               isVisible={showAlert}
             />
             
-            {/* Left Panel - Routes */}
+            {/* Left Panel - Routes & Navigation */}
             <div className="w-[400px] flex flex-col gap-4 flex-shrink-0">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white">Routes</h2>
-                <SafetyToggles 
-                  active={safetyToggles}
-                  onToggle={handleSafetyToggle}
-                />
-              </div>
-              
-              <div className="space-y-3 overflow-y-auto pr-1 -mr-1">
-                {routes.map((route) => (
-                  <RouteCard
-                    key={route.id}
-                    route={route}
-                    isSelected={selectedRouteId === route.id}
-                    onSelect={setSelectedRouteId}
+              {!selectedRoute ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-white">Routes</h2>
+                    <SafetyToggles 
+                      active={safetyToggles}
+                      onToggle={handleSafetyToggle}
+                    />
+                  </div>
+                  
+                  <div className="space-y-3 overflow-y-auto pr-1 -mr-1">
+                    {routes.map((route) => (
+                      <RouteCard
+                        key={route.id}
+                        route={route}
+                        isSelected={selectedRouteId === route.id}
+                        onSelect={setSelectedRouteId}
+                      />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setSelectedRouteId(null)}
+                    className="text-sm text-slate-400 hover:text-white transition-colors text-left"
+                  >
+                    ← Back to routes
+                  </button>
+                  <TurnByTurnPanel 
+                    route={selectedRoute}
+                    destination={mockDestination}
+                    onShare={() => setShowShareModal(true)}
                   />
-                ))}
-              </div>
+                </>
+              )}
             </div>
             
             {/* Right Panel - Map */}
@@ -282,6 +303,14 @@ export default function Home() {
               destination={mockDestination}
               eta={selectedRoute?.eta}
               routeType={selectedRoute?.type}
+            />
+            
+            {/* Share Route Modal */}
+            <ShareRouteModal 
+              isOpen={showShareModal}
+              onClose={() => setShowShareModal(false)}
+              route={selectedRoute}
+              destination={mockDestination}
             />
           </motion.div>
         )}
