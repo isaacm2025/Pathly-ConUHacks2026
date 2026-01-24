@@ -12,12 +12,21 @@ export const AuthProvider = ({ children }) => {
   const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(true);
   const [authError, setAuthError] = useState(null);
   const [appPublicSettings, setAppPublicSettings] = useState(null); // Contains only { id, public_settings }
+  const hasBase44Config = Boolean(appParams.appId) && Boolean(appParams.appBaseUrl);
 
   useEffect(() => {
     checkAppState();
   }, []);
 
   const checkAppState = async () => {
+    if (!hasBase44Config) {
+      setAppPublicSettings(null);
+      setAuthError(null);
+      setIsAuthenticated(false);
+      setIsLoadingPublicSettings(false);
+      setIsLoadingAuth(false);
+      return;
+    }
     try {
       setIsLoadingPublicSettings(true);
       setAuthError(null);
@@ -88,6 +97,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const checkUserAuth = async () => {
+    if (!hasBase44Config) {
+      setIsLoadingAuth(false);
+      setIsAuthenticated(false);
+      return;
+    }
     try {
       // Now check if the user is authenticated
       setIsLoadingAuth(true);
@@ -113,7 +127,9 @@ export const AuthProvider = ({ children }) => {
   const logout = (shouldRedirect = true) => {
     setUser(null);
     setIsAuthenticated(false);
-    
+    if (!hasBase44Config) {
+      return;
+    }
     if (shouldRedirect) {
       // Use the SDK's logout method which handles token cleanup and redirect
       base44.auth.logout(window.location.href);
@@ -124,6 +140,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const navigateToLogin = () => {
+    if (!hasBase44Config) {
+      return;
+    }
     // Use the SDK's redirectToLogin method
     base44.auth.redirectToLogin(window.location.href);
   };

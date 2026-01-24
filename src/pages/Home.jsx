@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import useLiveLocation from "../hooks/useLiveLocation";
+import { fetchNearbyPlaces, fetchRoutes } from "../api/pathlyApi";
 import { motion, AnimatePresence } from "framer-motion";
 import TopBar from "../components/shared/TopBar";
 import FilterChips from "../components/day/FilterChips";
@@ -8,14 +10,32 @@ import RouteCard from "../components/night/RouteCard";
 import SafetyToggles from "../components/night/SafetyToggles";
 import DestinationBar from "../components/night/DestinationBar";
 import SafetyAlert from "../components/night/SafetyAlert";
-
+import useStreetActivity from "../hooks/useStreetActivity";
 // Mock data for demonstration
+const montrealCenter = [45.5019, -73.5674];
+const montrealBounds = {
+  north: 45.57,
+  south: 45.44,
+  east: -73.49,
+  west: -73.73,
+};
+
+const isWithinMontreal = (location) => {
+  const [lat, lng] = location;
+  return (
+    lat <= montrealBounds.north &&
+    lat >= montrealBounds.south &&
+    lng <= montrealBounds.east &&
+    lng >= montrealBounds.west
+  );
+};
+
 const mockPlaces = [
-  { id: "1", name: "Blue Bottle Coffee", type: "cafe", status: "not_busy", eta_minutes: 7, latitude: 40.7145, longitude: -74.0071 },
-  { id: "2", name: "Equinox Tribeca", type: "gym", status: "moderate", eta_minutes: 12, latitude: 40.7162, longitude: -74.0085 },
-  { id: "3", name: "NYPL Battery Park", type: "library", status: "not_busy", eta_minutes: 9, latitude: 40.7105, longitude: -74.0155 },
-  { id: "4", name: "WeWork Fulton", type: "cowork", status: "busy", eta_minutes: 15, latitude: 40.7095, longitude: -74.0070 },
-  { id: "5", name: "Stumptown Coffee", type: "cafe", status: "moderate", eta_minutes: 6, latitude: 40.7185, longitude: -74.0052 },
+  { id: "1", name: "Crew Collective Cafe", type: "cafe", status: "not_busy", eta_minutes: 6, latitude: 45.5022, longitude: -73.5560 },
+  { id: "2", name: "Nautilus Plus", type: "gym", status: "moderate", eta_minutes: 11, latitude: 45.5012, longitude: -73.5755 },
+  { id: "3", name: "Grande Bibliotheque", type: "library", status: "not_busy", eta_minutes: 9, latitude: 45.5165, longitude: -73.5619 },
+  { id: "4", name: "WeWork Place Ville Marie", type: "cowork", status: "busy", eta_minutes: 14, latitude: 45.5007, longitude: -73.5702 },
+  { id: "5", name: "Cafe Olimpico", type: "cafe", status: "moderate", eta_minutes: 8, latitude: 45.5233, longitude: -73.6007 },
 ];
 
 const mockRoutes = [
@@ -25,7 +45,7 @@ const mockRoutes = [
     eta: 14, 
     safetyScore: 94,
     description: "More lighting and active streets",
-    path: [[40.7128, -74.0060], [40.7140, -74.0080], [40.7160, -74.0090], [40.7180, -74.0070]]
+    path: [[45.5019, -73.5674], [45.5045, -73.5738], [45.5070, -73.5710], [45.5095, -73.5670]]
   },
   { 
     id: "2", 
@@ -33,7 +53,7 @@ const mockRoutes = [
     eta: 11, 
     safetyScore: 82,
     description: "Good balance of speed and safety",
-    path: [[40.7128, -74.0060], [40.7150, -74.0070], [40.7180, -74.0070]]
+    path: [[45.5019, -73.5674], [45.5035, -73.5630], [45.5065, -73.5640], [45.5095, -73.5670]]
   },
   { 
     id: "3", 
@@ -41,17 +61,19 @@ const mockRoutes = [
     eta: 8, 
     safetyScore: 68,
     description: "Shortest path, some quieter areas",
-    path: [[40.7128, -74.0060], [40.7155, -74.0065], [40.7180, -74.0070]]
+    path: [[45.5019, -73.5674], [45.5055, -73.5660], [45.5095, -73.5670]]
   },
 ];
 
 const mockDestination = {
   label: "Home",
-  latitude: 40.7180,
-  longitude: -74.0070
+  latitude: 45.5095,
+  longitude: -73.5670
 };
 
 export default function Home() {
+  const { location: liveLocation, error: locationError } = useLiveLocation(montrealCenter);
+  const { streetActivity, error: streetError } = useStreetActivity();
   const [mode, setMode] = useState("day");
   const [activeFilters, setActiveFilters] = useState([]);
   const [highlightedId, setHighlightedId] = useState(null);
@@ -59,8 +81,10 @@ export default function Home() {
   const [safetyToggles, setSafetyToggles] = useState(["well_lit", "busy_areas"]);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [showAlert, setShowAlert] = useState(false);
-  
+  const [places, setPlaces] = useState([]);
+  const [routes, setRoutes] = useState([]);
   const isDark = mode === "night";
+  const scopedLocation = isWithinMontreal(liveLocation) ? liveLocation : montrealCenter;
   
   // Simulate live updates
   useEffect(() => {
@@ -101,16 +125,10 @@ export default function Home() {
     );
   };
   
-  // Filter and sort places
-  const sortedPlaces = [...mockPlaces].sort((a, b) => {
-    // Prioritize by status, then ETA
-    const statusOrder = { not_busy: 0, moderate: 1, busy: 2 };
-    const statusDiff = statusOrder[a.status] - statusOrder[b.status];
-    if (statusDiff !== 0) return statusDiff;
-    return a.eta_minutes - b.eta_minutes;
-  });
-  
-  const selectedRoute = mockRoutes.find(r => r.id === selectedRouteId);
+  // No extra filtering for unsupported criteria; just show all results from Google
+  const sortedPlaces = places;
+
+  const selectedRoute = routes.find(r => r.id === selectedRouteId);
   
   return (
     <div className={`
@@ -155,11 +173,20 @@ export default function Home() {
             {/* Right Panel - Map */}
             <div className="flex-1">
               <MapView 
-                places={sortedPlaces}
-                highlightedId={highlightedId}
-                onMarkerHover={setHighlightedId}
-                isDark={false}
-              />
+                  places={sortedPlaces}
+                  highlightedId={highlightedId}
+                  onMarkerHover={setHighlightedId}
+                  isDark={false}
+                  userLocation={scopedLocation}
+                  mapCenter={montrealCenter}
+                  zoom={13}
+                  streetActivity={streetActivity}
+                />
+              {streetError && (
+                <div className="mt-2 text-xs text-rose-600">
+                  Street overlay failed to load. Please try again.
+                </div>
+              )}
             </div>
           </motion.div>
         ) : (
@@ -188,7 +215,7 @@ export default function Home() {
               </div>
               
               <div className="space-y-3 overflow-y-auto pr-1 -mr-1">
-                {mockRoutes.map((route) => (
+                {routes.map((route) => (
                   <RouteCard
                     key={route.id}
                     route={route}
@@ -204,9 +231,20 @@ export default function Home() {
               <MapView 
                 isDark={true}
                 routes={mockRoutes}
-                userLocation={[40.7128, -74.0060]}
+                highlightedId={highlightedId}
+                onMarkerHover={setHighlightedId}
+                userLocation={scopedLocation}
                 destination={mockDestination}
+                mapCenter={montrealCenter}
+                zoom={13}
+                streetActivity={streetActivity}
               />
+              {streetError && (
+                <div className="mt-2 text-xs text-rose-200">
+                  Street overlay failed to load. Please try again.
+                </div>
+              )}
+              {locationError && <div style={{ color: 'red', textAlign: 'center' }}>{locationError}</div>}
             </div>
             
             {/* Destination Bar */}

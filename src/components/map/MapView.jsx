@@ -1,168 +1,200 @@
-import { useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { useMemo } from "react";
+import { GoogleMap, Marker, Polyline, useJsApiLoader } from "@react-google-maps/api";
 
-// Custom numbered marker
-function createNumberedIcon(number, status, isHighlighted = false) {
-  const colors = {
-    not_busy: "#10B981",
-    moderate: "#F59E0B",
-    busy: "#EF4444"
+// Custom marker label for Google Maps (numbered)
+function createNumberedLabel(number, status, isHighlighted = false) {
+  return {
+    text: String(number),
+    color: "white",
+    fontWeight: "700",
+    fontSize: isHighlighted ? "16px" : "13px",
   };
-  const color = colors[status] || colors.moderate;
-  const size = isHighlighted ? 36 : 28;
-  
-  return L.divIcon({
-    className: "custom-marker",
-    html: `
-      <div style="
-        width: ${size}px;
-        height: ${size}px;
-        background: ${color};
-        border: 3px solid white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        font-size: ${isHighlighted ? 14 : 12}px;
-        color: white;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        transition: all 0.2s ease;
-      ">
-        ${number}
-      </div>
-    `,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
+}
+
+const containerStyle = {
+  width: '100%',
+  height: '100%',
+};
+
+const ACTIVITY_COLOR_STOPS = [
+  { stop: 0, color: "#bfe7ff" },
+  { stop: 0.45, color: "#ffe08a" },
+  { stop: 0.7, color: "#f4a261" },
+  { stop: 1, color: "#b00020" },
+];
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const hexToRgb = (hex) => {
+  const normalized = hex.replace("#", "");
+  const value = parseInt(normalized, 16);
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255,
+  };
+};
+
+const rgbToHex = ({ r, g, b }) => {
+  const toHex = (channel) => channel.toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+};
+
+const mixColors = (fromHex, toHex, t) => {
+  const from = hexToRgb(fromHex);
+  const to = hexToRgb(toHex);
+  const mix = (start, end) => Math.round(start + (end - start) * t);
+  return rgbToHex({
+    r: mix(from.r, to.r),
+    g: mix(from.g, to.g),
+    b: mix(from.b, to.b),
   });
-}
+};
 
-function MapUpdater({ center }) {
-  const map = useMap();
-  useEffect(() => {
-    if (center) {
-      map.flyTo(center, 14, { duration: 0.5 });
-    }
-  }, [center, map]);
-  return null;
-}
+// Map people counts to a light-blue -> yellow -> orange -> red ramp.
+const getActivityColor = (t) => {
+  const clamped = clamp(t, 0, 1);
+  const upperIndex = ACTIVITY_COLOR_STOPS.findIndex((stop) => stop.stop >= clamped);
+  if (upperIndex === -1) return ACTIVITY_COLOR_STOPS[ACTIVITY_COLOR_STOPS.length - 1].color;
+  if (upperIndex === 0) return ACTIVITY_COLOR_STOPS[0].color;
+  const lower = ACTIVITY_COLOR_STOPS[upperIndex - 1];
+  const upper = ACTIVITY_COLOR_STOPS[upperIndex];
+  const localT = (clamped - lower.stop) / (upper.stop - lower.stop);
+  return mixColors(lower.color, upper.color, localT);
+};
 
-export default function MapView({ 
-  places = [], 
-  highlightedId, 
+export default function MapView({
+  places = [],
+  highlightedId,
   onMarkerHover,
   isDark = false,
   routes = [],
-  userLocation = [40.7128, -74.0060],
-  destination = null
+  userLocation = [45.5019, -73.5674],
+  destination = null,
+  streetActivity = [],
+  mapCenter = null,
+  zoom = 14,
 }) {
-  const tileUrl = isDark
-    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: apiKey,
+  });
 
+  const center = useMemo(() => {
+    const [lat, lng] = mapCenter ?? userLocation;
+    return { lat, lng };
+  }, [mapCenter, userLocation]);
+  const userPosition = useMemo(() => ({ lat: userLocation[0], lng: userLocation[1] }), [userLocation]);
   const routeColors = {
     safest: "#10B981",
     balanced: "#3B82F6",
     fastest: "#F59E0B"
   };
+  const activityRange = useMemo(() => {
+    if (streetActivity.length === 0) return { min: 0, max: 1 };
+    let min = Infinity;
+    let max = -Infinity;
+    streetActivity.forEach((street) => {
+      min = Math.min(min, street.people);
+      max = Math.max(max, street.people);
+    });
+    if (min === max) return { min, max: min + 1 };
+    return { min, max };
+  }, [streetActivity]);
+
+  const getActivityStyle = (people) => {
+    const range = activityRange.max - activityRange.min;
+    const normalized = range === 0 ? 0 : (people - activityRange.min) / range;
+    const clamped = clamp(normalized, 0, 1);
+    return {
+      color: getActivityColor(clamped),
+      weight: 2 + clamped * 4,
+    };
+  };
+
+  if (!isLoaded) return <div>Loading map…</div>;
 
   return (
     <div className="w-full h-full rounded-2xl overflow-hidden shadow-inner">
-      <MapContainer
-        center={userLocation}
-        zoom={14}
-        className="w-full h-full"
-        zoomControl={false}
+      <GoogleMap
+        mapContainerStyle={containerStyle}
+        center={center}
+        zoom={zoom}
+        options={{
+          disableDefaultUI: false,
+          styles: isDark ? [
+            { elementType: 'geometry', stylers: [{ color: '#1a1a1a' }] },
+            { elementType: 'labels.text.fill', stylers: [{ color: '#f5f5f5' }] },
+            { elementType: 'labels.text.stroke', stylers: [{ color: '#1a1a1a' }] },
+          ] : undefined,
+        }}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-          url={tileUrl}
-        />
-        
+        {/* Street activity overlay */}
+        {streetActivity.map((street) => {
+          const style = getActivityStyle(street.people);
+          return (
+            <Polyline
+              key={street.id || street.name}
+              path={street.path.map(([lat, lng]) => ({ lat, lng }))}
+              options={{
+                strokeColor: style.color,
+                strokeWeight: style.weight,
+                strokeOpacity: isDark ? 0.9 : 0.75,
+                zIndex: 1,
+                clickable: false,
+              }}
+            />
+          );
+        })}
+
         {/* Place markers for day mode */}
         {places.map((place, index) => (
           <Marker
             key={place.id}
-            position={[place.latitude || 40.7128 + (index * 0.005), place.longitude || -74.0060 + (index * 0.005)]}
-            icon={createNumberedIcon(index + 1, place.status, highlightedId === place.id)}
-            eventHandlers={{
-              mouseover: () => onMarkerHover?.(place.id),
-              mouseout: () => onMarkerHover?.(null),
+            position={{
+              lat: place.latitude || 45.5019 + (index * 0.005),
+              lng: place.longitude || -73.5674 + (index * 0.005)
             }}
-          >
-            <Popup>
-              <div className="text-sm font-medium">{place.name}</div>
-            </Popup>
-          </Marker>
+            label={createNumberedLabel(index + 1, place.status, highlightedId === place.id)}
+            onMouseOver={() => onMarkerHover?.(place.id)}
+            onMouseOut={() => onMarkerHover?.(null)}
+          />
         ))}
 
         {/* Routes for night mode */}
         {routes.map((route) => (
           <Polyline
             key={route.id}
-            positions={route.path}
-            pathOptions={{
-              color: routeColors[route.type] || "#3B82F6",
-              weight: route.type === "safest" ? 6 : 4,
-              opacity: 0.8,
+            path={route.path.map(([lat, lng]) => ({ lat, lng }))}
+            options={{
+              strokeColor: routeColors[route.type] || "#3B82F6",
+              strokeWeight: route.type === "safest" ? 6 : 4,
+              strokeOpacity: 0.8,
+              zIndex: 2,
             }}
           />
         ))}
 
         {/* User location marker */}
-        {isDark && (
-          <Marker
-            position={userLocation}
-            icon={L.divIcon({
-              className: "user-marker",
-              html: `
-                <div style="
-                  width: 20px;
-                  height: 20px;
-                  background: #3B82F6;
-                  border: 4px solid white;
-                  border-radius: 50%;
-                  box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.2);
-                  animation: pulse 2s infinite;
-                "></div>
-              `,
-              iconSize: [20, 20],
-              iconAnchor: [10, 10],
-            })}
-          />
-        )}
+        <Marker
+          position={userPosition}
+          icon={{
+            url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+            scaledSize: { width: 40, height: 40 },
+          }}
+        />
 
         {/* Destination marker */}
         {destination && (
           <Marker
-            position={[destination.latitude, destination.longitude]}
-            icon={L.divIcon({
-              className: "destination-marker",
-              html: `
-                <div style="
-                  width: 24px;
-                  height: 24px;
-                  background: white;
-                  border: 4px solid #8B5CF6;
-                  border-radius: 50%;
-                  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                "></div>
-              `,
-              iconSize: [24, 24],
-              iconAnchor: [12, 12],
-            })}
+            position={{ lat: destination.latitude, lng: destination.longitude }}
+            icon={{
+              url: 'https://maps.google.com/mapfiles/ms/icons/purple-dot.png',
+              scaledSize: { width: 44, height: 44 },
+            }}
           />
         )}
-      </MapContainer>
-      
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.2); }
-          50% { box-shadow: 0 0 0 16px rgba(59, 130, 246, 0.1); }
-        }
-      `}</style>
+      </GoogleMap>
     </div>
   );
 }
