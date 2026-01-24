@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import useLiveLocation from "../hooks/useLiveLocation";
 import { motion, AnimatePresence } from "framer-motion";
 import TopBar from "../components/shared/TopBar";
 import FilterChips from "../components/day/FilterChips";
@@ -52,6 +53,7 @@ const mockDestination = {
 };
 
 export default function Home() {
+  const { location: liveLocation, error: locationError } = useLiveLocation();
   const [mode, setMode] = useState("day");
   const [activeFilters, setActiveFilters] = useState([]);
   const [highlightedId, setHighlightedId] = useState(null);
@@ -155,11 +157,12 @@ export default function Home() {
             {/* Right Panel - Map */}
             <div className="flex-1">
               <MapView 
-                places={sortedPlaces}
-                highlightedId={highlightedId}
-                onMarkerHover={setHighlightedId}
-                isDark={false}
-              />
+                  places={sortedPlaces}
+                  highlightedId={highlightedId}
+                  onMarkerHover={setHighlightedId}
+                  isDark={false}
+                  userLocation={liveLocation}
+                />
             </div>
           </motion.div>
         ) : (
@@ -204,9 +207,10 @@ export default function Home() {
               <MapView 
                 isDark={true}
                 routes={mockRoutes}
-                userLocation={[40.7128, -74.0060]}
+                userLocation={liveLocation}
                 destination={mockDestination}
               />
+  {locationError && <div style={{ color: 'red', textAlign: 'center' }}>{locationError}</div>}
             </div>
             
             {/* Destination Bar */}
