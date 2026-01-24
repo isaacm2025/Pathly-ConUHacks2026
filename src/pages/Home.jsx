@@ -3,6 +3,7 @@ import useLiveLocation from "../hooks/useLiveLocation";
 import { fetchNearbyPlaces, fetchRoutes } from "../api/pathlyApi";
 import { motion, AnimatePresence } from "framer-motion";
 import TopBar from "../components/shared/TopBar";
+import SearchBar from "../components/day/SearchBar";
 import FilterChips from "../components/day/FilterChips";
 import PlacesList from "../components/day/PlacesList";
 import MapView from "../components/map/MapView";
@@ -75,6 +76,7 @@ export default function Home() {
   const { location: liveLocation, error: locationError } = useLiveLocation(montrealCenter);
   const { streetActivity, error: streetError } = useStreetActivity();
   const [mode, setMode] = useState("day");
+  const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState([]);
   const [highlightedId, setHighlightedId] = useState(null);
   const [selectedRouteId, setSelectedRouteId] = useState("1");
@@ -125,8 +127,28 @@ export default function Home() {
     );
   };
   
-  // No extra filtering for unsupported criteria; just show all results from Google
-  const sortedPlaces = places;
+  // Filter places based on search query and active filters
+  const filteredPlaces = places.filter(place => {
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesName = place.name.toLowerCase().includes(query);
+      const matchesType = place.type.toLowerCase().includes(query);
+      if (!matchesName && !matchesType) return false;
+    }
+    
+    // Active filters
+    if (activeFilters.length > 0) {
+      if (activeFilters.includes("distance") && place.eta_minutes > 10) return false;
+      if (activeFilters.includes("low_crowd") && place.status === "busy") return false;
+      if (activeFilters.includes("cafe") && place.type !== "cafe") return false;
+      if (activeFilters.includes("gym") && place.type !== "gym") return false;
+    }
+    
+    return true;
+  });
+  
+  const sortedPlaces = filteredPlaces;
 
   const selectedRoute = routes.find(r => r.id === selectedRouteId);
   
@@ -154,6 +176,14 @@ export default function Home() {
           >
             {/* Left Panel - Places */}
             <div className="w-[420px] flex flex-col flex-shrink-0">
+              <div className="mb-3">
+                <SearchBar 
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  placeholder="Search places..."
+                />
+              </div>
+
               <div className="mb-4">
                 <FilterChips 
                   activeFilters={activeFilters}
