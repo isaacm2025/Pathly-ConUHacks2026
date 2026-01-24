@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import useLiveLocation from "../hooks/useLiveLocation";
+import { fetchNearbyPlaces, fetchRoutes } from "../api/pathlyApi";
 import { motion, AnimatePresence } from "framer-motion";
 import TopBar from "../components/shared/TopBar";
 import FilterChips from "../components/day/FilterChips";
@@ -10,41 +11,6 @@ import SafetyToggles from "../components/night/SafetyToggles";
 import DestinationBar from "../components/night/DestinationBar";
 import SafetyAlert from "../components/night/SafetyAlert";
 
-// Mock data for demonstration
-const mockPlaces = [
-  { id: "1", name: "Blue Bottle Coffee", type: "cafe", status: "not_busy", eta_minutes: 7, latitude: 40.7145, longitude: -74.0071 },
-  { id: "2", name: "Equinox Tribeca", type: "gym", status: "moderate", eta_minutes: 12, latitude: 40.7162, longitude: -74.0085 },
-  { id: "3", name: "NYPL Battery Park", type: "library", status: "not_busy", eta_minutes: 9, latitude: 40.7105, longitude: -74.0155 },
-  { id: "4", name: "WeWork Fulton", type: "cowork", status: "busy", eta_minutes: 15, latitude: 40.7095, longitude: -74.0070 },
-  { id: "5", name: "Stumptown Coffee", type: "cafe", status: "moderate", eta_minutes: 6, latitude: 40.7185, longitude: -74.0052 },
-];
-
-const mockRoutes = [
-  { 
-    id: "1", 
-    type: "safest", 
-    eta: 14, 
-    safetyScore: 94,
-    description: "More lighting and active streets",
-    path: [[40.7128, -74.0060], [40.7140, -74.0080], [40.7160, -74.0090], [40.7180, -74.0070]]
-  },
-  { 
-    id: "2", 
-    type: "balanced", 
-    eta: 11, 
-    safetyScore: 82,
-    description: "Good balance of speed and safety",
-    path: [[40.7128, -74.0060], [40.7150, -74.0070], [40.7180, -74.0070]]
-  },
-  { 
-    id: "3", 
-    type: "fastest", 
-    eta: 8, 
-    safetyScore: 68,
-    description: "Shortest path, some quieter areas",
-    path: [[40.7128, -74.0060], [40.7155, -74.0065], [40.7180, -74.0070]]
-  },
-];
 
 const mockDestination = {
   label: "Home",
@@ -61,10 +27,36 @@ export default function Home() {
   const [safetyToggles, setSafetyToggles] = useState(["well_lit", "busy_areas"]);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [showAlert, setShowAlert] = useState(false);
-  
+  const [places, setPlaces] = useState([]);
+  const [routes, setRoutes] = useState([]);
   const isDark = mode === "night";
   
-  // Simulate live updates
+  // Fetch real Google Places nearby when location or filters change
+  useEffect(() => {
+    if (!liveLocation) return;
+    const [lat, lng] = liveLocation;
+    // Map filters to Google Places API supported params
+    let type = '';
+    let opennow = false;
+    let radius = 3000; // Increase radius for more results
+    activeFilters.forEach(f => {
+      if (["cafe","gym","library","restaurant","bar"].includes(f)) type = f;
+      if (f === "open_now") opennow = true;
+    });
+    fetchNearbyPlaces(lat, lng, type, radius, opennow).then(setPlaces);
+  }, [liveLocation, activeFilters]);
+
+  // Fetch live routes when location, destination, or toggles change
+  useEffect(() => {
+    if (!liveLocation) return;
+    const [lat, lng] = liveLocation;
+    const from = [lat, lng];
+    const to = [mockDestination.latitude, mockDestination.longitude];
+    const preferences = { toggles: safetyToggles.join(",") };
+    fetchRoutes(from, to, preferences).then(setRoutes);
+  }, [liveLocation, safetyToggles]);
+
+  // Simulate live updates (refreshes data every 30s)
   useEffect(() => {
     const interval = setInterval(() => {
       setLastUpdate(new Date());
@@ -103,16 +95,10 @@ export default function Home() {
     );
   };
   
-  // Filter and sort places
-  const sortedPlaces = [...mockPlaces].sort((a, b) => {
-    // Prioritize by status, then ETA
-    const statusOrder = { not_busy: 0, moderate: 1, busy: 2 };
-    const statusDiff = statusOrder[a.status] - statusOrder[b.status];
-    if (statusDiff !== 0) return statusDiff;
-    return a.eta_minutes - b.eta_minutes;
-  });
-  
-  const selectedRoute = mockRoutes.find(r => r.id === selectedRouteId);
+  // No extra filtering for unsupported criteria; just show all results from Google
+  const sortedPlaces = places;
+
+  const selectedRoute = routes.find(r => r.id === selectedRouteId);
   
   return (
     <div className={`
@@ -191,7 +177,7 @@ export default function Home() {
               </div>
               
               <div className="space-y-3 overflow-y-auto pr-1 -mr-1">
-                {mockRoutes.map((route) => (
+                {routes.map((route) => (
                   <RouteCard
                     key={route.id}
                     route={route}
@@ -206,9 +192,11 @@ export default function Home() {
             <div className="flex-1">
               <MapView 
                 isDark={true}
-                routes={mockRoutes}
+                routes={routes}
                 userLocation={liveLocation}
                 destination={mockDestination}
+                highlightedId={highlightedId}
+                onMarkerHover={setHighlightedId}
               />
   {locationError && <div style={{ color: 'red', textAlign: 'center' }}>{locationError}</div>}
             </div>
