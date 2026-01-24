@@ -1,76 +1,114 @@
-// Fetch real nearby places from backend (Google Places API)
-export async function fetchNearbyPlaces(lat, lng, type = '', radius = 1500, opennow = false) {
-  const params = new URLSearchParams({ lat: String(lat), lng: String(lng), type, radius: String(radius) });
-  if (opennow) params.append('opennow', 'true');
-  const res = await fetch(`${API_BASE}/api/nearby-places?${params}`);
-  if (!res.ok) throw new Error('Failed to fetch nearby places');
-  return await res.json();
-}
-// Fetch Google Place Details via backend
-export async function fetchPlaceDetails(placeId) {
-  const res = await fetch(`${API_BASE}/api/place-details/${placeId}`);
-  if (!res.ok) throw new Error('Failed to fetch place details');
-  return await res.json();
-}
 // Unified API utility for Pathly
-// Falls back to mock data if backend is unavailable
-
-const API_BASE = import.meta.env.VITE_BASE44_APP_BASE_URL || '';
+// Fetches real data from Google Places API with fallback to mock data
 
 // Mock data for fallback
 const mockPlaces = [
-  { id: "1", name: "Blue Bottle Coffee", type: "cafe", status: "not_busy", eta_minutes: 7, latitude: 40.7145, longitude: -74.0071 },
-  { id: "2", name: "Equinox Tribeca", type: "gym", status: "moderate", eta_minutes: 12, latitude: 40.7162, longitude: -74.0085 },
-  { id: "3", name: "NYPL Battery Park", type: "library", status: "not_busy", eta_minutes: 9, latitude: 40.7105, longitude: -74.0155 },
-  { id: "4", name: "WeWork Fulton", type: "cowork", status: "busy", eta_minutes: 15, latitude: 40.7095, longitude: -74.0070 },
-  { id: "5", name: "Stumptown Coffee", type: "cafe", status: "moderate", eta_minutes: 6, latitude: 40.7185, longitude: -74.0052 },
+  { id: "1", place_id: "mock-1", name: "Blue Bottle Coffee", type: "cafe", types: ["cafe"], status: "not_busy", eta_minutes: 7, latitude: 45.5022, longitude: -73.5560, rating: 4.5, open: true, vicinity: "1 Place Ville Marie" },
+  { id: "2", place_id: "mock-2", name: "Nautilus Plus", type: "gym", types: ["gym"], status: "moderate", eta_minutes: 12, latitude: 45.5012, longitude: -73.5755, rating: 4.2, open: true, vicinity: "500 Sherbrooke St W" },
+  { id: "3", place_id: "mock-3", name: "Grande Bibliotheque", type: "library", types: ["library"], status: "not_busy", eta_minutes: 9, latitude: 45.5165, longitude: -73.5619, rating: 4.6, open: true, vicinity: "475 De Maisonneuve Blvd E" },
+  { id: "4", place_id: "mock-4", name: "WeWork Fulton", type: "cowork", types: ["coworking_space"], status: "busy", eta_minutes: 15, latitude: 45.5007, longitude: -73.5702, rating: 4.0, open: true, vicinity: "3 Place Ville Marie" },
+  { id: "5", place_id: "mock-5", name: "Cafe Olimpico", type: "cafe", types: ["cafe"], status: "moderate", eta_minutes: 6, latitude: 45.5233, longitude: -73.6007, rating: 4.4, open: true, vicinity: "124 Rue Saint-Viateur O" },
 ];
 
 const mockRoutes = [
   {
-    id: "1", 
-    type: "safest", 
-    eta: 14, 
+    id: "1",
+    type: "safest",
+    eta: 14,
     safetyScore: 94,
     description: "More lighting and active streets",
-    path: [[40.7128, -74.0060], [40.7140, -74.0080], [40.7160, -74.0090], [40.7180, -74.0070]]
+    path: [[45.5019, -73.5674], [45.5045, -73.5738], [45.5070, -73.5710], [45.5095, -73.5670]]
   },
-  { 
-    id: "2", 
-    type: "balanced", 
-    eta: 11, 
+  {
+    id: "2",
+    type: "balanced",
+    eta: 11,
     safetyScore: 82,
     description: "Good balance of speed and safety",
-    path: [[40.7128, -74.0060], [40.7150, -74.0070], [40.7180, -74.0070]]
+    path: [[45.5019, -73.5674], [45.5035, -73.5630], [45.5065, -73.5640], [45.5095, -73.5670]]
   },
-  { 
-    id: "3", 
-    type: "fastest", 
-    eta: 8, 
+  {
+    id: "3",
+    type: "fastest",
+    eta: 8,
     safetyScore: 68,
     description: "Shortest path, some quieter areas",
-    path: [[40.7128, -74.0060], [40.7155, -74.0065], [40.7180, -74.0070]]
+    path: [[45.5019, -73.5674], [45.5055, -73.5660], [45.5095, -73.5670]]
   },
 ];
 
+// Fetch nearby places using Google Places API directly (client-side)
+export async function fetchNearbyPlacesFromGoogle(map, lat, lng, type = '', radius = 1500) {
+  return new Promise((resolve) => {
+    if (!window.google || !window.google.maps || !window.google.maps.places) {
+      console.warn("Google Places API not loaded, using mock data");
+      resolve(mockPlaces);
+      return;
+    }
+
+    const service = new window.google.maps.places.PlacesService(map);
+    const location = new window.google.maps.LatLng(lat, lng);
+
+    const request = {
+      location,
+      radius,
+      type: type || undefined,
+    };
+
+    service.nearbySearch(request, (results, status) => {
+      if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
+        console.log("Google Places API returned:", results.length, "places");
+        resolve(results);
+      } else {
+        console.warn("Google Places API error:", status, "using mock data");
+        resolve(mockPlaces);
+      }
+    });
+  });
+}
+
+// Legacy function for backward compatibility - returns mock data
+export async function fetchNearbyPlaces(lat, lng, type = '', radius = 1500, opennow = false) {
+  console.log("fetchNearbyPlaces called - returning mock data (use fetchNearbyPlacesFromGoogle for real data)");
+  return mockPlaces;
+}
+
+// Fetch Google Place Details using Places Service
+export async function fetchPlaceDetailsFromGoogle(map, placeId) {
+  return new Promise((resolve, reject) => {
+    if (!window.google || !window.google.maps || !window.google.maps.places) {
+      reject(new Error("Google Places API not loaded"));
+      return;
+    }
+
+    const service = new window.google.maps.places.PlacesService(map);
+
+    service.getDetails(
+      {
+        placeId,
+        fields: ['name', 'formatted_address', 'formatted_phone_number', 'opening_hours', 'rating', 'website', 'geometry'],
+      },
+      (result, status) => {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK && result) {
+          resolve(result);
+        } else {
+          reject(new Error(`Place details error: ${status}`));
+        }
+      }
+    );
+  });
+}
+
+// Legacy function
+export async function fetchPlaceDetails(placeId) {
+  console.warn("fetchPlaceDetails without map reference - returning empty");
+  return {};
+}
+
 export async function fetchPlaces(lat, lng, preferences) {
-  try {
-    const params = new URLSearchParams({ lat, lng, ...preferences });
-    const res = await fetch(`${API_BASE}/api/places?${params}`);
-    if (!res.ok) throw new Error('API error');
-    return await res.json();
-  } catch (e) {
-    return mockPlaces;
-  }
+  return mockPlaces;
 }
 
 export async function fetchRoutes(from, to, preferences) {
-  try {
-    const params = new URLSearchParams({ from: from.join(','), to: to.join(','), ...preferences });
-    const res = await fetch(`${API_BASE}/api/routes?${params}`);
-    if (!res.ok) throw new Error('API error');
-    return await res.json();
-  } catch (e) {
-    return mockRoutes;
-  }
+  return mockRoutes;
 }
