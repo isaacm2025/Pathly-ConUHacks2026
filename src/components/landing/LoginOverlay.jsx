@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 export default function LoginOverlay({ onClose }) {
   const [priority, setPriority] = useState("safety");
@@ -92,13 +93,24 @@ export default function LoginOverlay({ onClose }) {
               </div>
             </div>
 
-            <button
-              type="submit"
-              className="mt-2 w-full rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-teal-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:brightness-110"
-            >
-              Enter Dashboard
-            </button>
+          <button
+            type="submit"
+            className="mt-2 w-full rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-teal-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:brightness-110"
+          >
+            Enter Dashboard
+          </button>
           </form>
+
+          <p className="mt-4 text-center text-sm text-slate-400">
+            New user?{" "}
+            <Link
+              to="/SignUp"
+              onClick={onClose}
+              className="font-semibold text-teal-200 transition hover:text-teal-100"
+            >
+              Sign up
+            </Link>
+          </p>
 
           <button
             type="button"
