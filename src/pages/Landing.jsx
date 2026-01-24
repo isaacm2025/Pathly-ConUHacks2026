@@ -46,6 +46,7 @@ export default function Landing() {
   const handleDisintegrationComplete = () => {
     // Mark landing as seen
     localStorage.setItem("pathly_seen_landing", "true");
+    localStorage.setItem("pathly_show_login", "true");
     
     // Navigate to dashboard
     window.location.href = createPageUrl("Home");

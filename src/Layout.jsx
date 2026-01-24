@@ -1,4 +1,21 @@
+import { useEffect, useState } from "react";
+import LoginOverlay from "@/components/landing/LoginOverlay";
+
 export default function Layout({ children }) {
+  const [showLogin, setShowLogin] = useState(false);
+
+  useEffect(() => {
+    const shouldShow = localStorage.getItem("pathly_show_login") === "true";
+    if (shouldShow && window.location.pathname === "/Home") {
+      setShowLogin(true);
+    }
+  }, []);
+
+  const handleLoginClose = () => {
+    localStorage.setItem("pathly_show_login", "false");
+    setShowLogin(false);
+  };
+
   return (
     <div className="min-h-screen font-sans antialiased">
       <style>{`
@@ -29,6 +46,7 @@ export default function Layout({ children }) {
         }
       `}</style>
       {children}
+      {showLogin && <LoginOverlay onClose={handleLoginClose} />}
     </div>
   );
 }
