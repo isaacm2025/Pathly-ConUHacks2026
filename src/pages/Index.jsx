@@ -3,16 +3,8 @@ import { createPageUrl } from "../utils";
 
 export default function Index() {
   useEffect(() => {
-    // Check if user has seen landing
-    const hasSeenLanding = localStorage.getItem("pathly_seen_landing");
-    
-    if (hasSeenLanding === "true") {
-      // Go straight to dashboard
-      window.location.href = createPageUrl("Home");
-    } else {
-      // Show landing page
-      window.location.href = createPageUrl("Landing");
-    }
+    // Always route through the landing page first.
+    window.location.href = createPageUrl("Landing");
   }, []);
   
   return (

@@ -238,11 +238,18 @@ export default function Home() {
             />
             
             {/* Left Panel - Routes & Navigation */}
-            <div className="w-[400px] flex flex-col gap-4 flex-shrink-0">
+            <div className="w-[420px] flex flex-col flex-shrink-0">
               {!selectedRoute ? (
                 <>
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-white">Routes</h2>
+                  <div className="mb-3">
+                    <SearchBar 
+                      value={searchQuery}
+                      onChange={setSearchQuery}
+                      placeholder="Search places..."
+                    />
+                  </div>
+
+                  <div className="mb-4">
                     <SafetyToggles 
                       active={safetyToggles}
                       onToggle={handleSafetyToggle}

@@ -14,14 +14,6 @@ export default function Landing() {
   const [showDashboard, setShowDashboard] = useState(false);
   
   useEffect(() => {
-    // Check if user has already seen landing
-    const hasSeenLanding = localStorage.getItem("pathly_seen_landing");
-    if (hasSeenLanding === "true" && window.location.pathname === "/Landing") {
-      // Skip landing and go straight to dashboard
-      window.location.href = createPageUrl("Home");
-      return;
-    }
-    
     // Show logo after particles converge (3 seconds)
     const logoTimer = setTimeout(() => setShowLogo(true), 3000);
     
