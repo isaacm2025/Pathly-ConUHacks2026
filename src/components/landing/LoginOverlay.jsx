@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
@@ -188,6 +189,17 @@ export default function LoginOverlay({ onClose }) {
               {isSubmitting ? "Saving..." : "Enter Dashboard"}
             </button>
           </form>
+
+          <p className="mt-4 text-center text-sm text-slate-400">
+            New user?{" "}
+            <Link
+              to="/SignUp"
+              onClick={onClose}
+              className="font-semibold text-teal-200 transition hover:text-teal-100"
+            >
+              Sign up
+            </Link>
+          </p>
 
           <button
             type="button"

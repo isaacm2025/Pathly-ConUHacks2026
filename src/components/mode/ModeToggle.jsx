@@ -19,11 +19,11 @@ export default function ModeToggle({ mode, onToggle }) {
       <motion.div
         initial={false}
         animate={{
-          x: isDay ? 0 : 32,
+          x: isDay ? 0 : 40,
         }}
         transition={{ type: "spring", stiffness: 500, damping: 30 }}
         className={`
-          absolute left-1 top-1 bottom-1 w-10 rounded-full
+          absolute left-0.5 top-0.5 bottom-0.5 w-10 rounded-full
           ${isDay ? "bg-white shadow-sm" : "bg-slate-600"}
         `}
       />
