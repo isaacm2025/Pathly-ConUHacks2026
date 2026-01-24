@@ -10,16 +10,77 @@ import RouteCard from "../components/night/RouteCard";
 import SafetyToggles from "../components/night/SafetyToggles";
 import DestinationBar from "../components/night/DestinationBar";
 import SafetyAlert from "../components/night/SafetyAlert";
+import useStreetActivity from "../hooks/useStreetActivity";
 
+<<<<<<< Updated upstream
+=======
+// Mock data for demonstration
+const montrealCenter = [45.5019, -73.5674];
+const montrealBounds = {
+  north: 45.57,
+  south: 45.44,
+  east: -73.49,
+  west: -73.73,
+};
+
+const isWithinMontreal = (location) => {
+  const [lat, lng] = location;
+  return (
+    lat <= montrealBounds.north &&
+    lat >= montrealBounds.south &&
+    lng <= montrealBounds.east &&
+    lng >= montrealBounds.west
+  );
+};
+
+const mockPlaces = [
+  { id: "1", name: "Crew Collective Cafe", type: "cafe", status: "not_busy", eta_minutes: 6, latitude: 45.5022, longitude: -73.5560 },
+  { id: "2", name: "Nautilus Plus", type: "gym", status: "moderate", eta_minutes: 11, latitude: 45.5012, longitude: -73.5755 },
+  { id: "3", name: "Grande Bibliotheque", type: "library", status: "not_busy", eta_minutes: 9, latitude: 45.5165, longitude: -73.5619 },
+  { id: "4", name: "WeWork Place Ville Marie", type: "cowork", status: "busy", eta_minutes: 14, latitude: 45.5007, longitude: -73.5702 },
+  { id: "5", name: "Cafe Olimpico", type: "cafe", status: "moderate", eta_minutes: 8, latitude: 45.5233, longitude: -73.6007 },
+];
+
+const mockRoutes = [
+  { 
+    id: "1", 
+    type: "safest", 
+    eta: 14, 
+    safetyScore: 94,
+    description: "More lighting and active streets",
+    path: [[45.5019, -73.5674], [45.5045, -73.5738], [45.5070, -73.5710], [45.5095, -73.5670]]
+  },
+  { 
+    id: "2", 
+    type: "balanced", 
+    eta: 11, 
+    safetyScore: 82,
+    description: "Good balance of speed and safety",
+    path: [[45.5019, -73.5674], [45.5035, -73.5630], [45.5065, -73.5640], [45.5095, -73.5670]]
+  },
+  { 
+    id: "3", 
+    type: "fastest", 
+    eta: 8, 
+    safetyScore: 68,
+    description: "Shortest path, some quieter areas",
+    path: [[45.5019, -73.5674], [45.5055, -73.5660], [45.5095, -73.5670]]
+  },
+];
+>>>>>>> Stashed changes
 
 const mockDestination = {
   label: "Home",
-  latitude: 40.7180,
-  longitude: -74.0070
+  latitude: 45.5095,
+  longitude: -73.5670
 };
 
 export default function Home() {
-  const { location: liveLocation, error: locationError } = useLiveLocation();
+  const { location: liveLocation, error: locationError } = useLiveLocation(montrealCenter);
+  const { streetActivity, error: streetError } = useStreetActivity({
+    bounds: montrealBounds,
+    center: montrealCenter,
+  });
   const [mode, setMode] = useState("day");
   const [activeFilters, setActiveFilters] = useState([]);
   const [highlightedId, setHighlightedId] = useState(null);
@@ -30,33 +91,9 @@ export default function Home() {
   const [places, setPlaces] = useState([]);
   const [routes, setRoutes] = useState([]);
   const isDark = mode === "night";
+  const scopedLocation = isWithinMontreal(liveLocation) ? liveLocation : montrealCenter;
   
-  // Fetch real Google Places nearby when location or filters change
-  useEffect(() => {
-    if (!liveLocation) return;
-    const [lat, lng] = liveLocation;
-    // Map filters to Google Places API supported params
-    let type = '';
-    let opennow = false;
-    let radius = 3000; // Increase radius for more results
-    activeFilters.forEach(f => {
-      if (["cafe","gym","library","restaurant","bar"].includes(f)) type = f;
-      if (f === "open_now") opennow = true;
-    });
-    fetchNearbyPlaces(lat, lng, type, radius, opennow).then(setPlaces);
-  }, [liveLocation, activeFilters]);
-
-  // Fetch live routes when location, destination, or toggles change
-  useEffect(() => {
-    if (!liveLocation) return;
-    const [lat, lng] = liveLocation;
-    const from = [lat, lng];
-    const to = [mockDestination.latitude, mockDestination.longitude];
-    const preferences = { toggles: safetyToggles.join(",") };
-    fetchRoutes(from, to, preferences).then(setRoutes);
-  }, [liveLocation, safetyToggles]);
-
-  // Simulate live updates (refreshes data every 30s)
+  // Simulate live updates
   useEffect(() => {
     const interval = setInterval(() => {
       setLastUpdate(new Date());
@@ -147,8 +184,16 @@ export default function Home() {
                   highlightedId={highlightedId}
                   onMarkerHover={setHighlightedId}
                   isDark={false}
-                  userLocation={liveLocation}
+                  userLocation={scopedLocation}
+                  mapCenter={montrealCenter}
+                  zoom={13}
+                  streetActivity={streetActivity}
                 />
+              {streetError && (
+                <div className="mt-2 text-xs text-rose-600">
+                  Street overlay failed to load. Please try again.
+                </div>
+              )}
             </div>
           </motion.div>
         ) : (
@@ -192,13 +237,19 @@ export default function Home() {
             <div className="flex-1">
               <MapView 
                 isDark={true}
-                routes={routes}
-                userLocation={liveLocation}
+                routes={mockRoutes}
+                userLocation={scopedLocation}
                 destination={mockDestination}
-                highlightedId={highlightedId}
-                onMarkerHover={setHighlightedId}
+                mapCenter={montrealCenter}
+                zoom={13}
+                streetActivity={streetActivity}
               />
-  {locationError && <div style={{ color: 'red', textAlign: 'center' }}>{locationError}</div>}
+              {streetError && (
+                <div className="mt-2 text-xs text-rose-200">
+                  Street overlay failed to load. Please try again.
+                </div>
+              )}
+              {locationError && <div style={{ color: 'red', textAlign: 'center' }}>{locationError}</div>}
             </div>
             
             {/* Destination Bar */}

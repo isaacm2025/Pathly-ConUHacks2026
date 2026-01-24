@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-export default function useLiveLocation(defaultLocation = [40.7128, -74.0060]) {
+export default function useLiveLocation(defaultLocation = [45.5019, -73.5674]) {
   const [location, setLocation] = useState(defaultLocation);
   const [error, setError] = useState(null);
 
