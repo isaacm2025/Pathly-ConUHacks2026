@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { GoogleMap, Marker, Polyline, useJsApiLoader } from "@react-google-maps/api";
+import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { GoogleMap, Marker, Polyline, useJsApiLoader, DirectionsRenderer } from "@react-google-maps/api";
 
 // Custom marker label for Google Maps (numbered)
 function createNumberedLabel(number, status, isHighlighted = false) {
@@ -22,6 +22,13 @@ const ACTIVITY_COLOR_STOPS = [
   { stop: 0.7, color: "#f4a261" },
   { stop: 1, color: "#b00020" },
 ];
+
+// Safety color scheme for night mode routes
+const SAFETY_COLORS = {
+  high: "#10B981",    // Green - well-lit, active
+  medium: "#F59E0B",  // Amber - moderate activity
+  low: "#EF4444",     // Red - low activity/isolated
+};
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -65,31 +72,78 @@ const getActivityColor = (t) => {
 
 export default function MapView({
   places = [],
-  highlightedId,
-  onMarkerHover,
+  highlightedId = null,
+  onMarkerHover = (id) => {},
+  onMapLoad = null,
   isDark = false,
   routes = [],
+  selectedRouteId = null,
   userLocation = [45.5019, -73.5674],
   destination = null,
   streetActivity = [],
   mapCenter = null,
   zoom = 14,
 }) {
+  const mapRef = useRef(null);
+
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: apiKey,
+    libraries: ["places"],
   });
+
+  // Callback when map loads
+  const handleMapLoad = useCallback((map) => {
+    mapRef.current = map;
+    console.log("Map loaded, calling onMapLoad callback");
+    if (onMapLoad) {
+      onMapLoad(map);
+    }
+  }, [onMapLoad]);
+
+  // State for directions
+  const [directions, setDirections] = useState(null);
+
+  // Fetch directions when destination changes
+  useEffect(() => {
+    if (!isLoaded || !destination || !userLocation) {
+      setDirections(null);
+      return;
+    }
+
+    const directionsService = new window.google.maps.DirectionsService();
+
+    directionsService.route(
+      {
+        origin: { lat: userLocation[0], lng: userLocation[1] },
+        destination: { lat: destination.latitude, lng: destination.longitude },
+        travelMode: window.google.maps.TravelMode.WALKING,
+      },
+      (result, status) => {
+        if (status === window.google.maps.DirectionsStatus.OK) {
+          console.log("Directions fetched successfully:", result);
+          setDirections(result);
+        } else {
+          console.error("Directions request failed:", status);
+          setDirections(null);
+        }
+      }
+    );
+  }, [isLoaded, destination, userLocation]);
 
   const center = useMemo(() => {
     const [lat, lng] = mapCenter ?? userLocation;
     return { lat, lng };
   }, [mapCenter, userLocation]);
   const userPosition = useMemo(() => ({ lat: userLocation[0], lng: userLocation[1] }), [userLocation]);
+
   const routeColors = {
     safest: "#10B981",
     balanced: "#3B82F6",
-    fastest: "#F59E0B"
+    fastest: "#F59E0B",
+    walking: "#3B82F6",  // Blue for day mode walking routes
   };
+
   const activityRange = useMemo(() => {
     if (streetActivity.length === 0) return { min: 0, max: 1 };
     let min = Infinity;
@@ -106,13 +160,43 @@ export default function MapView({
     const range = activityRange.max - activityRange.min;
     const normalized = range === 0 ? 0 : (people - activityRange.min) / range;
     const clamped = clamp(normalized, 0, 1);
+
+    // Red for busy (high activity), Blue for less busy (low activity)
+    const busyColor = "#EF4444";   // Red
+    const quietColor = "#3B82F6";  // Blue
+
     return {
-      color: getActivityColor(clamped),
-      weight: 2 + clamped * 4,
+      color: clamped > 0.5 ? busyColor : quietColor,
+      weight: 3 + clamped * 3,
+      opacity: 0.6 + clamped * 0.3,
     };
   };
 
-  if (!isLoaded) return <div>Loading map…</div>;
+  // Generate color-coded route segments based on safety scores
+  const getRouteSegments = (route) => {
+    if (!route.path || route.path.length < 2) {
+      console.warn("Route has invalid path:", route);
+      return [];
+    }
+
+    const segments = [];
+    const colors = route.segmentColors || [];
+
+    for (let i = 0; i < route.path.length - 1; i++) {
+      const color = colors[i] || routeColors[route.type] || "#3B82F6";
+      segments.push({
+        path: [route.path[i], route.path[i + 1]],
+        color,
+      });
+    }
+
+    console.log("Generated segments for route:", route.id, segments);
+    return segments;
+  };
+
+  if (!isLoaded) return <div className={`w-full h-full rounded-2xl flex items-center justify-center ${isDark ? "bg-slate-800" : "bg-slate-100"}`}>
+    <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+  </div>;
 
   return (
     <div className="w-full h-full rounded-2xl overflow-hidden shadow-inner">
@@ -120,6 +204,7 @@ export default function MapView({
         mapContainerStyle={containerStyle}
         center={center}
         zoom={zoom}
+        onLoad={handleMapLoad}
         options={{
           disableDefaultUI: false,
           styles: isDark ? [
@@ -129,7 +214,7 @@ export default function MapView({
           ] : undefined,
         }}
       >
-        {/* Street activity overlay */}
+        {/* Street activity lines - Red for busy, Blue for less busy */}
         {streetActivity.map((street) => {
           const style = getActivityStyle(street.people);
           return (
@@ -139,7 +224,7 @@ export default function MapView({
               options={{
                 strokeColor: style.color,
                 strokeWeight: style.weight,
-                strokeOpacity: isDark ? 0.9 : 0.75,
+                strokeOpacity: style.opacity,
                 zIndex: 1,
                 clickable: false,
               }}
@@ -161,19 +246,78 @@ export default function MapView({
           />
         ))}
 
-        {/* Routes for night mode */}
-        {routes.map((route) => (
-          <Polyline
-            key={route.id}
-            path={route.path.map(([lat, lng]) => ({ lat, lng }))}
+        {/* Routes for night mode - with color-coded segments */}
+        {routes.length > 0 && console.log("Rendering routes:", routes)}
+        {routes.map((route) => {
+          const isSelected = route.id === selectedRouteId;
+          const segments = getRouteSegments(route);
+          console.log("Route:", route.id, "isSelected:", isSelected, "segments:", segments.length);
+
+          // If route has segment colors, render each segment separately
+          if (segments.length > 0 && isSelected) {
+            return (
+              <React.Fragment key={route.id}>
+                {segments.map((segment, idx) => (
+                  <Polyline
+                    key={`${route.id}-segment-${idx}`}
+                    path={segment.path.map(([lat, lng]) => ({ lat, lng }))}
+                    options={{
+                      strokeColor: segment.color,
+                      strokeWeight: 6,
+                      strokeOpacity: 1,
+                      zIndex: 3,
+                    }}
+                  />
+                ))}
+              </React.Fragment>
+            );
+          }
+
+          // Non-selected routes render as single polyline with lower opacity
+          return (
+            <Polyline
+              key={route.id}
+              path={route.path.map(([lat, lng]) => ({ lat, lng }))}
+              options={{
+                strokeColor: routeColors[route.type] || "#3B82F6",
+                strokeWeight: isSelected ? 6 : 4,
+                strokeOpacity: isSelected ? 0.9 : 0.4,
+                zIndex: isSelected ? 3 : 2,
+              }}
+            />
+          );
+        })}
+
+        {/* Direct route line when destination is set */}
+        {directions && (
+          <DirectionsRenderer
+            directions={directions}
             options={{
-              strokeColor: routeColors[route.type] || "#3B82F6",
-              strokeWeight: route.type === "safest" ? 6 : 4,
-              strokeOpacity: 0.8,
-              zIndex: 2,
+              suppressMarkers: true,
+              polylineOptions: {
+                strokeColor: "#3B82F6",
+                strokeWeight: 5,
+                strokeOpacity: 0.8,
+              },
             }}
           />
-        ))}
+        )}
+
+        {/* Fallback: Simple straight line if directions not available but destination is set */}
+        {destination && !directions && (
+          <Polyline
+            path={[
+              { lat: userLocation[0], lng: userLocation[1] },
+              { lat: destination.latitude, lng: destination.longitude }
+            ]}
+            options={{
+              strokeColor: "#3B82F6",
+              strokeWeight: 5,
+              strokeOpacity: 0.8,
+              zIndex: 50,
+            }}
+          />
+        )}
 
         {/* User location marker */}
         <Marker
@@ -184,15 +328,19 @@ export default function MapView({
           }}
         />
 
-        {/* Destination marker */}
+        {/* Destination marker - always show when destination is set */}
         {destination && (
-          <Marker
-            position={{ lat: destination.latitude, lng: destination.longitude }}
-            icon={{
-              url: 'https://maps.google.com/mapfiles/ms/icons/purple-dot.png',
-              scaledSize: { width: 44, height: 44 },
-            }}
-          />
+          <>
+            {console.log("Rendering destination marker at:", destination.latitude, destination.longitude)}
+            <Marker
+              position={{ lat: destination.latitude, lng: destination.longitude }}
+              icon={{
+                url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                scaledSize: { width: 50, height: 50 },
+              }}
+              title={destination.label || "Destination"}
+            />
+          </>
         )}
       </GoogleMap>
     </div>
