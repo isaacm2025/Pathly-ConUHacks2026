@@ -20,7 +20,7 @@ export default function LogoReveal({ isVisible, isDisintegrating }) {
           y: isDisintegrating ? -50 : 0,
         }}
         transition={{ duration: isDisintegrating ? 0.8 : 1.2, delay: isDisintegrating ? 0 : 2.5 }}
-        className="mb-6"
+        className="mb-6 -mt-14"
       >
         <motion.div
           animate={{

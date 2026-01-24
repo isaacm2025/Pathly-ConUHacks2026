@@ -5,6 +5,16 @@ export default function ParticleField({ isDisintegrating, onComplete }) {
   const canvasRef = useRef(null);
   const particlesRef = useRef([]);
   const animationFrameRef = useRef(null);
+  const isDisintegratingRef = useRef(isDisintegrating);
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    isDisintegratingRef.current = isDisintegrating;
+  }, [isDisintegrating]);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
   
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -52,7 +62,7 @@ export default function ParticleField({ isDisintegrating, onComplete }) {
       time++;
       
       particlesRef.current.forEach((p) => {
-        if (isDisintegrating) {
+        if (isDisintegratingRef.current) {
           // Explode outward
           if (!p.exploding) {
             p.exploding = true;
@@ -94,7 +104,7 @@ export default function ParticleField({ isDisintegrating, onComplete }) {
           ctx.fill();
           
           // Draw connections when converged
-          if (p.converged && !isDisintegrating) {
+          if (p.converged && !isDisintegratingRef.current) {
             particlesRef.current.forEach((p2) => {
               if (p2.converged) {
                 const dx = p2.x - p.x;
@@ -115,8 +125,8 @@ export default function ParticleField({ isDisintegrating, onComplete }) {
       });
       
       // Check if disintegration is complete
-      if (isDisintegrating && particlesRef.current.every(p => p.opacity <= 0)) {
-        onComplete?.();
+      if (isDisintegratingRef.current && particlesRef.current.every(p => p.opacity <= 0)) {
+        onCompleteRef.current?.();
         return;
       }
       
@@ -131,7 +141,7 @@ export default function ParticleField({ isDisintegrating, onComplete }) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isDisintegrating, onComplete]);
+  }, []);
   
   return (
     <canvas
