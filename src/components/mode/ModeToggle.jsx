@@ -5,46 +5,37 @@ export default function ModeToggle({ mode, onToggle }) {
   const isDay = mode === "day";
 
   return (
-    <button
-      onClick={onToggle}
-      className={`
-        relative flex items-center gap-2 px-4 h-9 leading-none rounded-full
-        transition-all duration-500 ease-out
-        ${isDay 
-          ? "bg-slate-100 text-slate-700" 
-          : "bg-slate-700 text-slate-200"
-        }
-      `}
-    >
+    <div className="relative flex items-center p-1 rounded-full bg-slate-700">
       <motion.div
         initial={false}
-        animate={{ x: isDay ? 0 : 32 }}
-        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-        className={`
-          absolute left-1 top-1 h-7 w-10 rounded-full
-          ${isDay ? "bg-white shadow-sm" : "bg-slate-600"}
-        `}
+        animate={{ x: isDay ? 0 : "100%" }}
+        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+        className="absolute left-1 top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-full shadow-sm"
       />
 
-      <span
+      <button
+        onClick={() => isDay ? null : onToggle()}
         className={`
-          relative z-10 flex items-center gap-1.5 text-sm font-medium
-          ${isDay ? "opacity-100" : "opacity-50"}
+          relative z-10 flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full
+          text-sm font-medium transition-colors min-w-[90px]
+          ${isDay ? "text-slate-700" : "text-slate-300"}
         `}
       >
-        <Sun className="w-4 h-4 block" />
+        <Sun className="w-4 h-4" />
         Day
-      </span>
+      </button>
 
-      <span
+      <button
+        onClick={() => !isDay ? null : onToggle()}
         className={`
-          relative z-10 flex items-center gap-1.5 text-sm font-medium
-          ${!isDay ? "opacity-100" : "opacity-50"}
+          relative z-10 flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full
+          text-sm font-medium transition-colors min-w-[90px]
+          ${!isDay ? "text-slate-700" : "text-slate-300"}
         `}
       >
-        <Moon className="w-4 h-4 block" />
+        <Moon className="w-4 h-4" />
         Night
-      </span>
-    </button>
+      </button>
+    </div>
   );
 }
