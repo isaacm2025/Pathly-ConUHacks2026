@@ -1,5 +1,11 @@
 import { motion } from "framer-motion";
 import { Shield, Zap, Scale, Clock, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import ReviewButton from "../reviews/ReviewButton";
+import ReviewModal from "../reviews/ReviewModal";
+import ReviewsDrawer from "../reviews/ReviewsDrawer";
 
 const routeConfig = {
   safest: {
@@ -26,6 +32,17 @@ const routeConfig = {
 };
 
 export default function RouteCard({ route, isSelected, onSelect }) {
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showReviewsDrawer, setShowReviewsDrawer] = useState(false);
+
+  // Fetch review count for this route
+  const { data: reviews = [] } = useQuery({
+    queryKey: ["reviews", "route", route.id],
+    queryFn: async () => {
+      return await base44.entities.Review.filter({ review_type: "route", target_id: route.id });
+    },
+  });
+
   const config = routeConfig[route.type] || routeConfig.balanced;
   const Icon = config.icon;
   
@@ -84,6 +101,48 @@ export default function RouteCard({ route, isSelected, onSelect }) {
           <ChevronRight className="w-4 h-4" />
         </motion.div>
       )}
-    </motion.button>
-  );
-}
+
+      {/* Review Button - only show when selected */}
+      {isSelected && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-3 pt-3 border-t border-slate-700"
+        >
+          <ReviewButton
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowReviewsDrawer(true);
+            }}
+            isDark={true}
+            count={reviews.length}
+          />
+        </motion.div>
+      )}
+      </motion.button>
+
+      {/* Review Modal */}
+      <ReviewModal
+      isOpen={showReviewModal}
+      onClose={() => setShowReviewModal(false)}
+      reviewType="route"
+      targetId={route.id}
+      targetName={`${route.type} route`}
+      isDark={true}
+      />
+
+      {/* Reviews Drawer */}
+      <ReviewsDrawer
+      isOpen={showReviewsDrawer}
+      onClose={() => setShowReviewsDrawer(false)}
+      reviewType="route"
+      targetId={route.id}
+      targetName={`${route.type} route`}
+      onOpenReviewModal={() => {
+        setShowReviewsDrawer(false);
+        setShowReviewModal(true);
+      }}
+      isDark={true}
+      />
+      );
+      }
