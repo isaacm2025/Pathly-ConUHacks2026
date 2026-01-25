@@ -30,6 +30,8 @@ import VoiceNavigator from "../components/navigation/VoiceNavigator";
 import useStreetActivity from "../hooks/useStreetActivity";
 import { base44 } from "@/api/base44Client";
 import { useMutation } from "@tanstack/react-query";
+import SolanaWalletPanel from "../components/solana/SolanaWalletPanel";
+import { SafetyReportButton } from "../components/solana/SafetyReportModal";
 
 // Montreal configuration - downtown area only for performance
 const montrealCenter = [45.5019, -73.5674];
@@ -496,30 +498,37 @@ function HomeContent() {
                     <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
                   </div>
                 ) : (
-                  <PlacesList
-                    places={rankedPlaces}
-                    highlightedId={highlightedId}
-                    onHover={setHighlightedId}
-                    onPlaceSelect={handlePlaceSelect}
-                    selectedPlaceId={selectedPlace?.id}
-                  />
+                  <>
+                    <PlacesList
+                      places={rankedPlaces}
+                      highlightedId={highlightedId}
+                      onHover={setHighlightedId}
+                      onPlaceSelect={handlePlaceSelect}
+                      selectedPlaceId={selectedPlace?.id}
+                    />
+
+                    {/* Recommendation Explanation */}
+                    {rankedPlaces.length > 0 && (
+                      <div className="mt-4 p-3 rounded-xl bg-slate-100 text-sm text-slate-600">
+                        <strong className="text-slate-700">Why this ranking?</strong>
+                        <p className="mt-1">
+                          Based on your preferences: {preferences.comfortProfile === "cautious"
+                            ? "prioritizing less crowded spots"
+                            : preferences.comfortProfile === "speed-focused"
+                              ? "prioritizing closest locations"
+                              : "balancing distance and crowd levels"
+                          }
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Solana Wallet Panel - Day Mode */}
+                    <div className="mt-4">
+                      <SolanaWalletPanel />
+                    </div>
+                  </>
                 )}
               </div>
-
-              {/* Recommendation Explanation */}
-              {rankedPlaces.length > 0 && (
-                <div className="mt-4 p-3 rounded-xl bg-slate-100 text-sm text-slate-600">
-                  <strong className="text-slate-700">Why this ranking?</strong>
-                  <p className="mt-1">
-                    Based on your preferences: {preferences.comfortProfile === "cautious"
-                      ? "prioritizing less crowded spots"
-                      : preferences.comfortProfile === "speed-focused"
-                        ? "prioritizing closest locations"
-                        : "balancing distance and crowd levels"
-                    }
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Right Panel - Map */}
@@ -733,6 +742,9 @@ function HomeContent() {
                     destination={destination}
                     isDark={true}
                   />
+
+                  {/* Solana Wallet Panel */}
+                  <SolanaWalletPanel />
                 </div>
               )}
             </div>
@@ -758,6 +770,13 @@ function HomeContent() {
                 places={[]} 
                 isDark={true} 
                 userLocation={scopedLocation}
+              />
+
+              {/* Solana Safety Report Button */}
+              <SafetyReportButton 
+                location={scopedLocation}
+                routeId={selectedRouteId}
+                className="absolute bottom-4 left-4"
               />
               
               {streetError && (

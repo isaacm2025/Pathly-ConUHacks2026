@@ -21,6 +21,10 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  define: {
+    // Polyfill for Solana packages that check for process.env
+    'process.env': {},
+  },
   plugins: [
     react()
   ]
