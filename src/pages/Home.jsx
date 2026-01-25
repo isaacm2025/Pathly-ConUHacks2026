@@ -17,14 +17,22 @@ import DestinationSearch from "../components/night/DestinationSearch";
 import SafetyAlert from "../components/night/SafetyAlert";
 import useStreetActivity from "../hooks/useStreetActivity";
 
-// Montreal configuration
+// Montreal configuration - downtown area only for performance
 const montrealCenter = [45.5019, -73.5674];
 const montrealBounds = {
-  north: 45.57,
-  south: 45.44,
-  east: -73.49,
-  west: -73.73,
+  north: 45.52,
+  south: 45.49,
+  east: -73.54,
+  west: -73.59,
 };
+
+// Only fetch main roads (not every tiny service road)
+const MAIN_ROAD_TYPES = [
+  "primary",
+  "secondary",
+  "tertiary",
+  "residential",
+];
 
 const isWithinMontreal = (location) => {
   const [lat, lng] = location;
@@ -107,6 +115,7 @@ function HomeContent() {
   const { streetActivity, error: streetError } = useStreetActivity({
     bounds: montrealBounds,
     center: montrealCenter,
+    roadTypes: MAIN_ROAD_TYPES,
   });
 
   const { preferences, recordRouteSelection } = useUserPreferences();
@@ -139,7 +148,6 @@ function HomeContent() {
 
   // Callback when map loads
   const handleMapLoad = useCallback((map) => {
-    console.log("Map loaded in Home, saving reference");
     setMapInstance(map);
   }, []);
 
@@ -172,10 +180,8 @@ function HomeContent() {
 
       // Use Google Places API if map is available
       if (mapInstance) {
-        console.log("Fetching places from Google Places API...");
         results = await fetchNearbyPlacesFromGoogle(mapInstance, scopedLocation[0], scopedLocation[1], placeType, 1500);
       } else {
-        console.log("Map not ready, using fallback...");
         results = await fetchNearbyPlaces(scopedLocation[0], scopedLocation[1], placeType, 1500, false);
       }
 
@@ -201,7 +207,6 @@ function HomeContent() {
         };
       });
 
-      console.log("Loaded", transformedPlaces.length, "places");
       setPlaces(transformedPlaces);
     } catch (error) {
       console.error("Error fetching places:", error);
@@ -255,8 +260,6 @@ function HomeContent() {
         [destLat, destLng]
       ];
 
-      console.log("Creating day mode route:", { origin: [originLat, originLng], dest: [destLat, destLng], path: routePath });
-
       setDayModeRoute({
         id: "day-route",
         type: "walking",
@@ -286,11 +289,9 @@ function HomeContent() {
   const handleRouteSelect = (routeId) => { setSelectedRouteId(routeId); const route = routes.find(r => r.id === routeId); if (route) recordRouteSelection(route.type); };
   const handleDestinationSelect = (dest) => setDestination(dest);
   const handlePlaceSelect = (place) => {
-    console.log("Place selected:", place);
     // Toggle selection - if same place clicked, deselect it
     setSelectedPlace(prev => {
       const newValue = prev?.id === place.id ? null : place;
-      console.log("Setting selectedPlace to:", newValue);
       return newValue;
     });
   };
@@ -385,8 +386,8 @@ function HomeContent() {
                 onMapLoad={handleMapLoad}
                 isDark={false}
                 userLocation={scopedLocation}
-                mapCenter={selectedPlace ? [selectedPlace.latitude, selectedPlace.longitude] : montrealCenter}
-                zoom={selectedPlace ? 15 : 14}
+                mapCenter={selectedPlace ? [selectedPlace.latitude, selectedPlace.longitude] : scopedLocation}
+                zoom={15}
                 streetActivity={streetActivity}
                 routes={[]}
                 selectedRouteId={null}
@@ -517,8 +518,8 @@ function HomeContent() {
                 selectedRouteId={selectedRouteId}
                 userLocation={scopedLocation}
                 destination={destination}
-                mapCenter={montrealCenter}
-                zoom={14}
+                mapCenter={scopedLocation}
+                zoom={15}
                 streetActivity={streetActivity}
                 highlightedId={null}
                 onMarkerHover={() => {}}

@@ -95,7 +95,6 @@ export default function MapView({
   // Callback when map loads
   const handleMapLoad = useCallback((map) => {
     mapRef.current = map;
-    console.log("Map loaded, calling onMapLoad callback");
     if (onMapLoad) {
       onMapLoad(map);
     }
@@ -121,10 +120,8 @@ export default function MapView({
       },
       (result, status) => {
         if (status === window.google.maps.DirectionsStatus.OK) {
-          console.log("Directions fetched successfully:", result);
           setDirections(result);
         } else {
-          console.error("Directions request failed:", status);
           setDirections(null);
         }
       }
@@ -158,17 +155,22 @@ export default function MapView({
 
   const getActivityStyle = (people) => {
     const range = activityRange.max - activityRange.min;
-    const normalized = range === 0 ? 0 : (people - activityRange.min) / range;
+    const normalized = range === 0 ? 0.5 : (people - activityRange.min) / range;
     const clamped = clamp(normalized, 0, 1);
 
-    // Red for busy (high activity), Blue for less busy (low activity)
-    const busyColor = "#EF4444";   // Red
-    const quietColor = "#3B82F6";  // Blue
+    // Gradient from darker blue (quiet) to darker red (busy)
+    const r = Math.round(59 + (220 - 59) * clamped);
+    const g = Math.round(130 + (38 - 130) * clamped);
+    const b = Math.round(246 + (38 - 246) * clamped);
+
+    const color = `rgb(${r}, ${g}, ${b})`;
+    const weight = 2 + clamped * 2;
+    const opacity = 0.6 + clamped * 0.3;
 
     return {
-      color: clamped > 0.5 ? busyColor : quietColor,
-      weight: 3 + clamped * 3,
-      opacity: 0.6 + clamped * 0.3,
+      color,
+      weight,
+      opacity,
     };
   };
 
@@ -190,7 +192,6 @@ export default function MapView({
       });
     }
 
-    console.log("Generated segments for route:", route.id, segments);
     return segments;
   };
 
@@ -225,7 +226,7 @@ export default function MapView({
                 strokeColor: style.color,
                 strokeWeight: style.weight,
                 strokeOpacity: style.opacity,
-                zIndex: 1,
+                zIndex: 10,
                 clickable: false,
               }}
             />
@@ -247,11 +248,9 @@ export default function MapView({
         ))}
 
         {/* Routes for night mode - with color-coded segments */}
-        {routes.length > 0 && console.log("Rendering routes:", routes)}
         {routes.map((route) => {
           const isSelected = route.id === selectedRouteId;
           const segments = getRouteSegments(route);
-          console.log("Route:", route.id, "isSelected:", isSelected, "segments:", segments.length);
 
           // If route has segment colors, render each segment separately
           if (segments.length > 0 && isSelected) {
@@ -330,8 +329,6 @@ export default function MapView({
 
         {/* Destination marker - always show when destination is set */}
         {destination && (
-          <>
-            {console.log("Rendering destination marker at:", destination.latitude, destination.longitude)}
             <Marker
               position={{ lat: destination.latitude, lng: destination.longitude }}
               icon={{
@@ -340,7 +337,6 @@ export default function MapView({
               }}
               title={destination.label || "Destination"}
             />
-          </>
         )}
       </GoogleMap>
     </div>

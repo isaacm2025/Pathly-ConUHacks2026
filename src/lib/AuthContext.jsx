@@ -26,7 +26,6 @@ export const AuthProvider = ({ children }) => {
 
   const navigateToLogin = () => {
     // No-op for hackathon demo
-    console.log('Login navigation skipped for demo');
   };
 
   const checkAppState = async () => {
