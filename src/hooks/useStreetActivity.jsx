@@ -98,6 +98,13 @@ const fetchOverpass = async (query, signal) => {
   throw lastError;
 };
 
+/**
+ * @typedef {{north: number, south: number, east: number, west: number}} Bounds
+ * @param {Object} params
+ * @param {Bounds} params.bounds
+ * @param {number[] | Object} params.center
+ * @param {string[]} params.roadTypes
+ */
 export default function useStreetActivity({
   bounds,
   center,
