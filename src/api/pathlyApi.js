@@ -109,3 +109,150 @@ export async function fetchPlaces(lat, lng, preferences) {
 export async function fetchRoutes(from, to, preferences) {
   return mockRoutes;
 }
+
+// ==================== MONGODB ATLAS API ====================
+
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+// Get auth token from localStorage
+const getToken = () => localStorage.getItem("pathly_token");
+
+// Authenticated fetch helper
+const authFetch = async (endpoint, options = {}) => {
+  const token = getToken();
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...options.headers,
+  };
+
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: "Request failed" }));
+    throw new Error(error.error || "Request failed");
+  }
+
+  return response.json();
+};
+
+// ==================== AUTH ====================
+
+export const auth = {
+  async register(email, username, password, priority = "safety") {
+    const data = await authFetch("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ email, username, password, priority }),
+    });
+    if (data.token) {
+      localStorage.setItem("pathly_token", data.token);
+      localStorage.setItem("pathly_user", JSON.stringify(data.user));
+    }
+    return data;
+  },
+
+  async login(email, password) {
+    const data = await authFetch("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+    if (data.token) {
+      localStorage.setItem("pathly_token", data.token);
+      localStorage.setItem("pathly_user", JSON.stringify(data.user));
+    }
+    return data;
+  },
+
+  logout() {
+    localStorage.removeItem("pathly_token");
+    localStorage.removeItem("pathly_user");
+  },
+
+  isLoggedIn() {
+    return !!getToken();
+  },
+
+  getUser() {
+    const user = localStorage.getItem("pathly_user");
+    return user ? JSON.parse(user) : null;
+  },
+};
+
+// ==================== SAFETY REPORTS (MongoDB Atlas) ====================
+
+export const safetyReportsApi = {
+  async submit(report) {
+    // report: { type, description, latitude, longitude, severity }
+    return authFetch("/api/safety-reports", {
+      method: "POST",
+      body: JSON.stringify(report),
+    });
+  },
+
+  async getNearby(lat, lng, radius = 1000) {
+    return authFetch(`/api/safety-reports?lat=${lat}&lng=${lng}&radius=${radius}`);
+  },
+
+  async upvote(reportId) {
+    return authFetch(`/api/safety-reports/${reportId}/upvote`, {
+      method: "POST",
+    });
+  },
+};
+
+// ==================== ROUTE HISTORY (MongoDB Atlas) ====================
+
+export const routesApi = {
+  async save(route) {
+    // route: { origin, destination, waypoints, distance, duration, safetyScore }
+    return authFetch("/api/routes", {
+      method: "POST",
+      body: JSON.stringify(route),
+    });
+  },
+
+  async getHistory() {
+    return authFetch("/api/routes");
+  },
+};
+
+// ==================== FAVORITE PLACES (MongoDB Atlas) ====================
+
+export const favoritesApi = {
+  async add(place) {
+    // place: { placeId, name, address, latitude, longitude, category }
+    return authFetch("/api/favorites", {
+      method: "POST",
+      body: JSON.stringify(place),
+    });
+  },
+
+  async getAll() {
+    return authFetch("/api/favorites");
+  },
+
+  async remove(favoriteId) {
+    return authFetch(`/api/favorites/${favoriteId}`, {
+      method: "DELETE",
+    });
+  },
+};
+
+// ==================== USER PROFILE (MongoDB Atlas) ====================
+
+export const profileApi = {
+  async get() {
+    return authFetch("/api/profile");
+  },
+
+  async update(updates) {
+    // updates: { priority, username }
+    return authFetch("/api/profile", {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    });
+  },
+};
