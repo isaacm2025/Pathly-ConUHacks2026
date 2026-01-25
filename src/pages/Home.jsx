@@ -23,6 +23,8 @@ import SafetyToggles from "../components/night/SafetyToggles";
 import DestinationBar from "../components/night/DestinationBar";
 import DestinationSearch from "../components/night/DestinationSearch";
 import SafetyAlert from "../components/night/SafetyAlert";
+import NightSafetyPanel from "../components/night/NightSafetyPanel";
+import NightQuickStats from "../components/night/NightQuickStats";
 import useStreetActivity from "../hooks/useStreetActivity";
 
 // Montreal configuration - downtown area only for performance
@@ -626,16 +628,39 @@ function HomeContent() {
                       </div>
                     </div>
                   )}
+
+                  {/* Safety Tools (collapsed by default when route is shown) */}
+                  <NightSafetyPanel 
+                    userLocation={scopedLocation}
+                    destination={destination}
+                    isDark={true}
+                  />
                 </>
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center">
-                  <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4">
-                    <span className="text-3xl">🌙</span>
+                <div className="flex-1 flex flex-col gap-4">
+                  {/* Empty State Header */}
+                  <div className="flex flex-col items-center justify-center text-center py-6">
+                    <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4">
+                      <span className="text-3xl">🌙</span>
+                    </div>
+                    <h2 className="text-xl font-semibold text-white mb-2">Night Mode</h2>
+                    <p className="text-slate-400 max-w-xs">
+                      Enter a destination above to see confidence-focused route options with safety scoring.
+                    </p>
                   </div>
-                  <h2 className="text-xl font-semibold text-white mb-2">Night Mode</h2>
-                  <p className="text-slate-400 max-w-xs">
-                    Enter a destination above to see confidence-focused route options with safety scoring.
-                  </p>
+
+                  {/* Quick Stats */}
+                  <NightQuickStats 
+                    streetActivity={streetActivity}
+                    userLocation={scopedLocation}
+                  />
+
+                  {/* Safety Tools */}
+                  <NightSafetyPanel 
+                    userLocation={scopedLocation}
+                    destination={destination}
+                    isDark={true}
+                  />
                 </div>
               )}
             </div>
