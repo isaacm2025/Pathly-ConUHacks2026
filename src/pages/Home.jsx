@@ -607,34 +607,68 @@ function HomeContent() {
                     )}
                   </div>
 
-                  {/* Route Explanation */}
-                  {selectedRoute && (
-                    <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700">
-                      <h3 className="text-sm font-medium text-slate-300 mb-2">Why this route?</h3>
-                      <p className="text-sm text-slate-400">{selectedRoute.description}</p>
-                      <div className="flex gap-2 mt-3">
-                        <span className="flex items-center gap-1 text-xs">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                          <span className="text-slate-500">Well-lit</span>
-                        </span>
-                        <span className="flex items-center gap-1 text-xs">
-                          <span className="w-2 h-2 rounded-full bg-amber-500" />
-                          <span className="text-slate-500">Moderate</span>
-                        </span>
-                        <span className="flex items-center gap-1 text-xs">
-                          <span className="w-2 h-2 rounded-full bg-rose-500" />
-                          <span className="text-slate-500">Low activity</span>
+                  {/* Combined Route Info & Safety Panel */}
+                  <div className="p-4 rounded-xl bg-slate-800/50 border border-slate-700 space-y-4">
+                    {/* Route Explanation */}
+                    {selectedRoute && (
+                      <div>
+                        <h3 className="text-sm font-medium text-slate-300 mb-2">Why this route?</h3>
+                        <p className="text-sm text-slate-400">{selectedRoute.description}</p>
+                        <div className="flex gap-3 mt-3">
+                          <span className="flex items-center gap-1 text-xs">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <span className="text-slate-500">Well-lit</span>
+                          </span>
+                          <span className="flex items-center gap-1 text-xs">
+                            <span className="w-2 h-2 rounded-full bg-amber-500" />
+                            <span className="text-slate-500">Moderate</span>
+                          </span>
+                          <span className="flex items-center gap-1 text-xs">
+                            <span className="w-2 h-2 rounded-full bg-rose-500" />
+                            <span className="text-slate-500">Low activity</span>
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Divider */}
+                    {selectedRoute && <div className="border-t border-slate-700" />}
+
+                    {/* Quick Safety Actions */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-medium text-slate-300">Safety Tools</h3>
+                        <span className="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-400">
+                          Area: 78%
                         </span>
                       </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          onClick={() => window.location.href = "tel:911"}
+                          className="flex flex-col items-center gap-1 p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 transition-colors border border-rose-500/30"
+                        >
+                          <span className="text-rose-400 text-lg">📞</span>
+                          <span className="text-[10px] text-rose-300">Emergency</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            const url = `https://www.google.com/maps?q=${scopedLocation[0]},${scopedLocation[1]}`;
+                            navigator.clipboard.writeText(url);
+                          }}
+                          className="flex flex-col items-center gap-1 p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 transition-colors border border-blue-500/30"
+                        >
+                          <span className="text-blue-400 text-lg">📍</span>
+                          <span className="text-[10px] text-blue-300">Share Location</span>
+                        </button>
+                        <button
+                          className="flex flex-col items-center gap-1 p-2 rounded-lg bg-slate-700/50 hover:bg-slate-700 transition-colors border border-slate-600"
+                        >
+                          <span className="text-slate-400 text-lg">🔦</span>
+                          <span className="text-[10px] text-slate-400">Flashlight</span>
+                        </button>
+                      </div>
                     </div>
-                  )}
-
-                  {/* Safety Tools (collapsed by default when route is shown) */}
-                  <NightSafetyPanel 
-                    userLocation={scopedLocation}
-                    destination={destination}
-                    isDark={true}
-                  />
+                  </div>
                 </>
               ) : (
                 <div className="flex-1 flex flex-col gap-4">

@@ -1,10 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 
 const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.nchc.org.tw/api/interpreter",
 ];
+
+// Cache for street data - persists across component remounts
+const streetDataCache = new Map();
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
 const DEFAULT_ROAD_TYPES = [
   "motorway",
@@ -113,6 +117,7 @@ export default function useStreetActivity({
   const [streetActivity, setStreetActivity] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const hasLoadedRef = useRef(false);
 
   const boundsKey = useMemo(() => {
     if (!bounds) return null;
@@ -121,6 +126,21 @@ export default function useStreetActivity({
 
   useEffect(() => {
     if (!bounds) return;
+    
+    // Check cache first
+    const cacheKey = boundsKey;
+    const cached = streetDataCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      setStreetActivity(cached.data);
+      hasLoadedRef.current = true;
+      return;
+    }
+
+    // Skip if already loaded (prevents re-fetching on re-renders)
+    if (hasLoadedRef.current && streetActivity.length > 0) {
+      return;
+    }
+
     const controller = new AbortController();
     const run = async () => {
       try {
@@ -145,10 +165,16 @@ export default function useStreetActivity({
               path,
             };
           });
+        
+        // Cache the result
+        streetDataCache.set(cacheKey, { data: streets, timestamp: Date.now() });
+        hasLoadedRef.current = true;
         setStreetActivity(streets);
       } catch (err) {
         if (!controller.signal.aborted) {
           setError(err);
+          // Use empty array on error so app still works
+          setStreetActivity([]);
         }
       } finally {
         if (!controller.signal.aborted) {
