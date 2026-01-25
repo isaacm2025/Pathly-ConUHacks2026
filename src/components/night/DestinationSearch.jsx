@@ -12,21 +12,52 @@ export default function DestinationSearch({
   const [predictions, setPredictions] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
   const inputRef = useRef(null);
   const autocompleteService = useRef(null);
   const placesService = useRef(null);
   const sessionToken = useRef(null);
 
-  // Initialize Google Places services
+  // Poll for Google Maps API availability (handles async loading)
   useEffect(() => {
-    if (window.google && window.google.maps && window.google.maps.places) {
+    const checkGoogleMaps = () => {
+      if (window.google && window.google.maps && window.google.maps.places) {
+        setIsGoogleLoaded(true);
+        return true;
+      }
+      return false;
+    };
+
+    // Check immediately
+    if (checkGoogleMaps()) return;
+
+    // Poll every 100ms until loaded (max 10 seconds)
+    const intervalId = setInterval(() => {
+      if (checkGoogleMaps()) {
+        clearInterval(intervalId);
+      }
+    }, 100);
+
+    const timeoutId = setTimeout(() => {
+      clearInterval(intervalId);
+    }, 10000);
+
+    return () => {
+      clearInterval(intervalId);
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
+  // Initialize Google Places services when API is loaded
+  useEffect(() => {
+    if (isGoogleLoaded && window.google?.maps?.places) {
       autocompleteService.current = new window.google.maps.places.AutocompleteService();
       // Create a dummy div for PlacesService (required but not displayed)
       const dummyDiv = document.createElement("div");
       placesService.current = new window.google.maps.places.PlacesService(dummyDiv);
       sessionToken.current = new window.google.maps.places.AutocompleteSessionToken();
     }
-  }, []);
+  }, [isGoogleLoaded]);
 
   // Fetch predictions when query changes
   useEffect(() => {
