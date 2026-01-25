@@ -355,6 +355,219 @@ app.put("/api/profile", authMiddleware, async (req, res) => {
   }
 });
 
+// ==================== LIVE DATA APIs ====================
+
+// Fetch Montreal crime/incident data from Open Data Portal (LAST 7 DAYS by default)
+// Serve cached incidents from MongoDB (last 24h)
+app.get("/api/live/incidents", async (req, res) => {
+  try {
+    const { lat, lng, radius = 1000 } = req.query;
+    const db = await connectDB();
+    const col = db.collection("liveIncidents");
+    // Only incidents from last 24h
+    const now = new Date();
+    const cutoffDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const query = { date: { $gte: cutoffDate.toISOString().split('T')[0] } };
+    let incidents = await col.find(query).toArray();
+    // Filter by proximity
+    if (lat && lng) {
+      incidents = incidents.filter(record => {
+        if (!record.latitude || !record.longitude) return false;
+        const distance = getDistanceKm(
+          parseFloat(lat),
+          parseFloat(lng),
+          parseFloat(record.latitude),
+          parseFloat(record.longitude)
+        );
+        return distance <= (radius / 1000);
+      });
+    }
+    incidents = incidents.slice(0, 50);
+    res.json({
+      incidents,
+      source: "MongoDB Atlas (cached)",
+      count: incidents.length,
+      timeWindow: "Last 24 hours",
+      fetchedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("Live incidents error:", error);
+    res.json({ incidents: [], source: "error", error: error.message });
+  }
+});
+
+// Fetch weather data affecting walking safety
+// Serve cached weather from MongoDB
+app.get("/api/live/weather", async (req, res) => {
+  try {
+    const db = await connectDB();
+    const col = db.collection("liveWeather");
+    const weather = await col.findOne({}, { sort: { fetchedAt: -1 } });
+    if (!weather) return res.json({ temperature: null, conditions: "unknown", walkingSafety: "unknown", source: "cache-miss" });
+    res.json(weather);
+  } catch (error) {
+    console.error("Weather error:", error);
+    res.json({ temperature: null, conditions: "unknown", walkingSafety: "unknown", source: "error" });
+  }
+});
+
+// Fetch construction/road closures from Montreal Open Data
+// Serve cached construction data from MongoDB
+app.get("/api/live/construction", async (req, res) => {
+  try {
+    const { lat, lng, radius = 1000 } = req.query;
+    const db = await connectDB();
+    const col = db.collection("liveConstructions");
+    let constructions = await col.find({}).toArray();
+    // Filter by proximity
+    if (lat && lng) {
+      constructions = constructions.filter(record => {
+        if (!record.latitude || !record.longitude) return false;
+        const distance = getDistanceKm(
+          parseFloat(lat),
+          parseFloat(lng),
+          parseFloat(record.latitude),
+          parseFloat(record.longitude)
+        );
+        return distance <= (radius / 1000);
+      });
+    }
+    constructions = constructions.slice(0, 30);
+    res.json({ constructions, source: "MongoDB Atlas (cached)", count: constructions.length });
+  } catch (error) {
+    console.error("Construction error:", error);
+    res.json({ constructions: [], source: "error" });
+  }
+});
+
+// Fetch street lighting data from OpenStreetMap via Overpass API
+// Serve cached lighting data from MongoDB
+app.get("/api/live/lighting", async (req, res) => {
+  try {
+    const db = await connectDB();
+    const col = db.collection("liveLighting");
+    const lights = await col.find({}).toArray();
+    // Calculate lighting coverage score
+    const coverageScore = Math.min(100, lights.length * 5);
+    res.json({
+      lights,
+      count: lights.length,
+      coverageScore,
+      assessment: coverageScore > 70 ? "well_lit" : coverageScore > 40 ? "moderate" : "poorly_lit",
+      source: "MongoDB Atlas (cached)"
+    });
+  } catch (error) {
+    console.error("Lighting error:", error);
+    res.json({ lights: [], coverageScore: 50, assessment: "unknown", source: "error" });
+  }
+});
+
+// Aggregate all live safety data
+app.get("/api/live/safety-summary", async (req, res) => {
+  try {
+    const { lat = 45.5019, lng = -73.5674, radius = 1000 } = req.query;
+    
+    // Fetch all data in parallel
+    const [incidentsRes, weatherRes, constructionRes, lightingRes] = await Promise.allSettled([
+      fetch(`http://localhost:${process.env.PORT || 3000}/api/live/incidents?lat=${lat}&lng=${lng}&radius=${radius}`).then(r => r.json()),
+      fetch(`http://localhost:${process.env.PORT || 3000}/api/live/weather?lat=${lat}&lng=${lng}`).then(r => r.json()),
+      fetch(`http://localhost:${process.env.PORT || 3000}/api/live/construction?lat=${lat}&lng=${lng}&radius=${radius}`).then(r => r.json()),
+      fetch(`http://localhost:${process.env.PORT || 3000}/api/live/lighting?lat=${lat}&lng=${lng}&radius=${Math.min(radius, 500)}`).then(r => r.json())
+    ]);
+
+    const incidents = incidentsRes.status === 'fulfilled' ? incidentsRes.value : { incidents: [] };
+    const weather = weatherRes.status === 'fulfilled' ? weatherRes.value : { walkingSafety: 'unknown' };
+    const construction = constructionRes.status === 'fulfilled' ? constructionRes.value : { constructions: [] };
+    const lighting = lightingRes.status === 'fulfilled' ? lightingRes.value : { assessment: 'unknown' };
+
+    // Calculate overall safety score
+    let safetyScore = 85; // Base score
+    safetyScore -= incidents.incidents?.length * 2 || 0;
+    safetyScore -= construction.constructions?.length * 1 || 0;
+    if (weather.walkingSafety === 'poor') safetyScore -= 15;
+    if (weather.walkingSafety === 'moderate') safetyScore -= 5;
+    if (lighting.assessment === 'poorly_lit') safetyScore -= 10;
+    safetyScore = Math.max(0, Math.min(100, safetyScore));
+
+    res.json({
+      safetyScore,
+      incidents: incidents.incidents?.slice(0, 10) || [],
+      weather,
+      constructions: construction.constructions?.slice(0, 10) || [],
+      lighting,
+      timestamp: new Date().toISOString(),
+      sources: ["Montreal Open Data", "OpenStreetMap", "OpenWeatherMap"]
+    });
+  } catch (error) {
+    console.error("Safety summary error:", error);
+    res.json({ safetyScore: 75, error: error.message });
+  }
+});
+
+// Helper functions for live data
+function getDistanceKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function getSeverityFromCategory(category) {
+  const highSeverity = ['vol qualifié', 'agression', 'voies de fait', 'méfait'];
+  const mediumSeverity = ['vol de véhicule', 'vol dans véhicule', 'introduction'];
+  const cat = (category || '').toLowerCase();
+  if (highSeverity.some(s => cat.includes(s))) return 'high';
+  if (mediumSeverity.some(s => cat.includes(s))) return 'medium';
+  return 'low';
+}
+
+// Convert date to "X hours ago" or "X minutes ago" format
+function getTimeAgo(dateStr) {
+  if (!dateStr) return 'Unknown';
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 60) return `${diffMins} min ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return 'Yesterday';
+  return `${diffDays} days ago`;
+}
+
+function calculateWeatherSafety(data) {
+  if (!data.weather) return 'unknown';
+  const conditions = data.weather[0]?.main?.toLowerCase();
+  const visibility = data.visibility || 10000;
+  const temp = data.main?.temp || 10;
+  
+  if (visibility < 1000 || conditions?.includes('storm') || conditions?.includes('snow')) return 'poor';
+  if (visibility < 5000 || temp < -10 || temp > 35 || conditions?.includes('rain')) return 'moderate';
+  return 'good';
+}
+
+function getWeatherAlerts(data) {
+  const alerts = [];
+  if (!data.weather) return alerts;
+  
+  const conditions = data.weather[0]?.main?.toLowerCase();
+  const visibility = data.visibility || 10000;
+  const temp = data.main?.temp || 10;
+  
+  if (visibility < 2000) alerts.push({ type: 'visibility', message: 'Low visibility - be careful' });
+  if (temp < -15) alerts.push({ type: 'cold', message: 'Extreme cold - limit outdoor time' });
+  if (temp > 32) alerts.push({ type: 'heat', message: 'High heat - stay hydrated' });
+  if (conditions?.includes('snow')) alerts.push({ type: 'snow', message: 'Snowy conditions - watch for ice' });
+  if (conditions?.includes('rain')) alerts.push({ type: 'rain', message: 'Rainy - slippery surfaces' });
+  
+  return alerts;
+}
+
 
 app.listen(process.env.PORT || 3000, () => {
   console.log(`🚀 Server running on port ${process.env.PORT || 3000}`);

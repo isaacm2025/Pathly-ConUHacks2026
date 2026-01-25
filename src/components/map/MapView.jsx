@@ -83,6 +83,8 @@ export default function MapView({
   streetActivity = [],
   mapCenter = null,
   zoom = 14,
+  liveIncidents = [], // NEW: Live crime incidents from Montreal Open Data
+  liveConstructions = [], // NEW: Construction zones
 }) {
   const mapRef = useRef(null);
 
@@ -323,6 +325,36 @@ export default function MapView({
             scaledSize: { width: 40, height: 40 },
           }}
         />
+
+        {/* LIVE INCIDENT MARKERS - Real crime data from Montreal Open Data */}
+        {liveIncidents.map((incident, index) => (
+          <Marker
+            key={`incident-${incident.id || index}`}
+            position={{ lat: incident.latitude, lng: incident.longitude }}
+            icon={{
+              url: incident.severity === 'high' 
+                ? 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+                : incident.severity === 'medium'
+                ? 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png'
+                : 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
+              scaledSize: { width: 30, height: 30 },
+            }}
+            title={`⚠️ ${incident.type} (${incident.timeAgo || incident.date})`}
+          />
+        ))}
+
+        {/* CONSTRUCTION ZONE MARKERS */}
+        {liveConstructions.map((construction, index) => (
+          <Marker
+            key={`construction-${construction.id || index}`}
+            position={{ lat: construction.latitude, lng: construction.longitude }}
+            icon={{
+              url: 'https://maps.google.com/mapfiles/ms/icons/purple-dot.png',
+              scaledSize: { width: 28, height: 28 },
+            }}
+            title={`🚧 ${construction.description || 'Construction Zone'}`}
+          />
+        ))}
 
         {/* Destination marker - always show when destination is set */}
         {destination && (

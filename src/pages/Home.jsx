@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import useLiveLocation from "../hooks/useLiveLocation";
 import { useUserPreferences, PreferencesProvider } from "../hooks/useUserPreferences";
-import { fetchNearbyPlaces, fetchNearbyPlacesFromGoogle } from "../api/pathlyApi";
+import { fetchNearbyPlaces, fetchNearbyPlacesFromGoogle, safetyReportsApi, routesApi, favoritesApi, liveDataApi } from "../api/pathlyApi";
 import { rankPlaces } from "../utils/ranking";
 import {
   fetchWalkingRoutes,
@@ -32,6 +32,7 @@ import { base44 } from "@/api/base44Client";
 import { useMutation } from "@tanstack/react-query";
 import SolanaWalletPanel from "../components/solana/SolanaWalletPanel";
 import { SafetyReportButton } from "../components/solana/SafetyReportModal";
+import LiveDataPanel from "../components/shared/LiveDataPanel";
 
 // Montreal configuration - downtown area only for performance
 const montrealCenter = [45.5019, -73.5674];
@@ -165,10 +166,84 @@ function HomeContent() {
   const [dayModeRoute, setDayModeRoute] = useState(null);
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
   const [mapInstance, setMapInstance] = useState(null);
+  const [nearbySafetyReports, setNearbySafetyReports] = useState([]);
+  
+  // Live data states (real-time from external sources)
+  const [liveData, setLiveData] = useState({
+    incidents: [],
+    weather: null,
+    constructions: [],
+    lighting: null,
+    safetyScore: null,
+    isLoading: true,
+    lastUpdated: null,
+    sources: [],
+  });
 
   const isDark = mode === "night";
   const scopedLocation = isWithinMontreal(liveLocation) ? liveLocation : montrealCenter;
   const timeContext = getTimeContext();
+
+  // Fetch nearby safety reports from MongoDB Atlas
+  useEffect(() => {
+    const fetchSafetyReports = async () => {
+      try {
+        const { reports } = await safetyReportsApi.getNearby(scopedLocation[0], scopedLocation[1], 2000);
+        setNearbySafetyReports(reports || []);
+        console.log(`Loaded ${reports?.length || 0} safety reports from MongoDB Atlas`);
+      } catch (err) {
+        console.log("Safety reports fetch skipped (server unavailable)");
+      }
+    };
+    fetchSafetyReports();
+    // Refresh every 2 minutes
+    const interval = setInterval(fetchSafetyReports, 120000);
+    return () => clearInterval(interval);
+  }, [scopedLocation[0], scopedLocation[1]]);
+
+  // Fetch LIVE DATA from external APIs (Montreal Open Data, OpenStreetMap, Weather)
+  useEffect(() => {
+    const fetchLiveData = async () => {
+      console.log("🔴 Fetching LIVE safety data from external sources...");
+      setLiveData(prev => ({ ...prev, isLoading: true }));
+      
+      try {
+        // Get comprehensive safety summary (includes all data sources)
+        const summary = await liveDataApi.getSafetySummary(
+          scopedLocation[0], 
+          scopedLocation[1], 
+          1500 // 1.5km radius
+        );
+        
+        setLiveData({
+          incidents: summary.incidents || [],
+          weather: summary.weather || null,
+          constructions: summary.constructions || [],
+          lighting: summary.lighting || null,
+          safetyScore: summary.safetyScore,
+          isLoading: false,
+          lastUpdated: new Date(),
+          sources: summary.sources || [],
+        });
+        
+        console.log(`✅ LIVE DATA: ${summary.incidents?.length || 0} incidents, ${summary.constructions?.length || 0} construction zones, Safety Score: ${summary.safetyScore}`);
+        
+        // Show alert if there are high-severity incidents nearby
+        const highSeverityIncidents = (summary.incidents || []).filter(i => i.severity === 'high');
+        if (highSeverityIncidents.length > 0 && isDark) {
+          setShowAlert(true);
+        }
+      } catch (error) {
+        console.log("Live data fetch skipped (server unavailable):", error.message);
+        setLiveData(prev => ({ ...prev, isLoading: false }));
+      }
+    };
+    
+    fetchLiveData();
+    // Refresh live data every 5 minutes
+    const interval = setInterval(fetchLiveData, 300000);
+    return () => clearInterval(interval);
+  }, [scopedLocation[0], scopedLocation[1], isDark]);
 
   // Callback when map loads
   const handleMapLoad = useCallback((map) => {
@@ -405,13 +480,14 @@ function HomeContent() {
   const handleModeToggle = () => { setAutoModeEnabled(false); setMode(mode === "day" ? "night" : "day"); setSelectedPlace(null); };
   const handleFilterToggle = (filterId) => setActiveFilters(prev => prev.includes(filterId) ? prev.filter(f => f !== filterId) : [...prev, filterId]);
   const handleSafetyToggle = (toggleId) => setSafetyToggles(prev => prev.includes(toggleId) ? prev.filter(t => t !== toggleId) : [...prev, toggleId]);
-  const handleRouteSelect = (routeId) => { 
+  const handleRouteSelect = async (routeId) => { 
     setSelectedRouteId(routeId); 
     const route = routes.find(r => r.id === routeId); 
     if (route) {
       recordRouteSelection(route.type);
       // Log to history in night mode
       if (mode === "night" && destination) {
+        // Save to base44
         logHistoryMutation.mutate({
           origin_lat: scopedLocation[0],
           origin_lng: scopedLocation[1],
@@ -423,6 +499,21 @@ function HomeContent() {
           mode: "night",
           eta_minutes: route.eta,
         });
+        
+        // Also save to MongoDB Atlas
+        try {
+          await routesApi.save({
+            origin: { lat: scopedLocation[0], lng: scopedLocation[1], label: "Current Location" },
+            destination: { lat: destination.latitude, lng: destination.longitude, label: destination.label },
+            waypoints: route.path || [],
+            distance: route.distance || null,
+            duration: route.eta,
+            safetyScore: route.safetyScore,
+          });
+          console.log("Route saved to MongoDB Atlas");
+        } catch (err) {
+          console.log("Route history save skipped (not logged in or server unavailable)");
+        }
       }
     }
   };
@@ -477,7 +568,12 @@ function HomeContent() {
             className="flex flex-row gap-4 p-4 h-[calc(100vh-64px)]"
           >
             {/* Left Panel - Places */}
-            <div className="w-[420px] flex flex-col flex-shrink-0">
+            <div className="w-[420px] flex flex-col flex-shrink-0 overflow-y-auto">
+              {/* LIVE DATA PANEL - Real-time safety info */}
+              <div className="mb-4">
+                <LiveDataPanel liveData={liveData} isDark={false} />
+              </div>
+              
               <div className="mb-4">
                 <FilterChips
                   activeFilters={activeFilters}
@@ -546,6 +642,8 @@ function HomeContent() {
                 routes={[]}
                 selectedRouteId={null}
                 destination={selectedPlace ? { latitude: selectedPlace.latitude, longitude: selectedPlace.longitude, label: selectedPlace.name } : null}
+                liveIncidents={liveData.incidents}
+                liveConstructions={liveData.constructions}
               />
               
               {/* AI Suggestion Button */}
@@ -607,7 +705,10 @@ function HomeContent() {
             />
 
             {/* Left Panel - Routes */}
-            <div className="w-[400px] flex flex-col gap-4 flex-shrink-0">
+            <div className="w-[400px] flex flex-col gap-4 flex-shrink-0 overflow-y-auto">
+              {/* LIVE DATA PANEL - Real-time safety info */}
+              <LiveDataPanel liveData={liveData} isDark={true} />
+              
               {/* Destination Search */}
               <DestinationSearch
                 onDestinationSelect={handleDestinationSelect}
@@ -763,6 +864,8 @@ function HomeContent() {
                 highlightedId={null}
                 onMarkerHover={() => {}}
                 onMapLoad={handleMapLoad}
+                liveIncidents={liveData.incidents}
+                liveConstructions={liveData.constructions}
               />
               
               {/* AI Suggestion Button */}

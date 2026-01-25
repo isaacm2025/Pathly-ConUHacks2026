@@ -256,3 +256,72 @@ export const profileApi = {
     });
   },
 };
+
+// ==================== LIVE DATA APIs (Real-time external sources) ====================
+
+export const liveDataApi = {
+  // Get crime/incident data from Montreal Open Data
+  async getIncidents(lat, lng, radius = 1000) {
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/live/incidents?lat=${lat}&lng=${lng}&radius=${radius}`
+      );
+      return response.json();
+    } catch (error) {
+      console.error("Failed to fetch incidents:", error);
+      return { incidents: [], source: "error" };
+    }
+  },
+
+  // Get current weather conditions
+  async getWeather(lat, lng) {
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/live/weather?lat=${lat}&lng=${lng}`
+      );
+      return response.json();
+    } catch (error) {
+      console.error("Failed to fetch weather:", error);
+      return { conditions: "unknown", walkingSafety: "unknown" };
+    }
+  },
+
+  // Get construction/road work data
+  async getConstruction(lat, lng, radius = 1000) {
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/live/construction?lat=${lat}&lng=${lng}&radius=${radius}`
+      );
+      return response.json();
+    } catch (error) {
+      console.error("Failed to fetch construction:", error);
+      return { constructions: [], source: "error" };
+    }
+  },
+
+  // Get street lighting coverage
+  async getLighting(lat, lng, radius = 500) {
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/live/lighting?lat=${lat}&lng=${lng}&radius=${radius}`
+      );
+      return response.json();
+    } catch (error) {
+      console.error("Failed to fetch lighting:", error);
+      return { assessment: "unknown", coverageScore: 50 };
+    }
+  },
+
+  // Get comprehensive safety summary (all data sources combined)
+  async getSafetySummary(lat, lng, radius = 1000) {
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/live/safety-summary?lat=${lat}&lng=${lng}&radius=${radius}`
+      );
+      return response.json();
+    } catch (error) {
+      console.error("Failed to fetch safety summary:", error);
+      return { safetyScore: 75, source: "error" };
+    }
+  },
+};
