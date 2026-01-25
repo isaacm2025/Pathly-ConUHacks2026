@@ -6,6 +6,7 @@ import { base44 } from "@/api/base44Client";
 import ReviewButton from "../reviews/ReviewButton";
 import ReviewModal from "../reviews/ReviewModal";
 import ReviewsDrawer from "../reviews/ReviewsDrawer";
+import FavoriteButton from "../favorites/FavoriteButton";
 
 const routeConfig = {
   safest: {
@@ -103,12 +104,12 @@ export default function RouteCard({ route, isSelected, onSelect }) {
         </motion.div>
       )}
 
-      {/* Review Button - only show when selected */}
+      {/* Review and Favorite Buttons - only show when selected */}
       {isSelected && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-3 pt-3 border-t border-slate-700"
+          className="mt-3 pt-3 border-t border-slate-700 flex items-center gap-2"
         >
           <ReviewButton
             onClick={(e) => {
@@ -117,6 +118,21 @@ export default function RouteCard({ route, isSelected, onSelect }) {
             }}
             isDark={true}
             count={reviews.length}
+          />
+          <FavoriteButton
+            type="route"
+            data={{
+              route_type: route.type,
+              origin_lat: 45.5019,
+              origin_lng: -73.5674,
+              origin_label: "Current Location",
+              dest_lat: route.path[route.path.length - 1][0],
+              dest_lng: route.path[route.path.length - 1][1],
+              dest_label: "Destination",
+              eta: route.eta,
+              safetyScore: route.safetyScore
+            }}
+            isDark={true}
           />
         </motion.div>
       )}
