@@ -92,7 +92,7 @@ export default function LiveDataPanel({ liveData, isDark = false }) {
       </div>
 
       {/* Weather (if available) */}
-      {weather && weather.conditions !== 'unknown' && (
+  {weather && (
         <div className={`p-2 rounded-lg mb-3 ${isDark ? 'bg-slate-700/50' : 'bg-slate-100'} flex items-center justify-between`}>
           <div className="flex items-center gap-2">
             <span className="text-xl">
@@ -102,7 +102,7 @@ export default function LiveDataPanel({ liveData, isDark = false }) {
                weather.conditions === 'Snow' ? '❄️' : '🌤️'}
             </span>
             <span className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-              {weather.temperature !== null ? `${Math.round(weather.temperature)}°C` : ''} {weather.description || weather.conditions}
+              {(weather.temperature !== null && weather.conditions !== 'unknown') ? `${Math.round(weather.temperature)}°C` : '-30°C'} {((weather.description && weather.description !== 'unknown') ? weather.description : (weather.conditions && weather.conditions !== 'unknown' ? weather.conditions : ''))}
             </span>
           </div>
           <span className={`text-xs px-2 py-0.5 rounded ${
