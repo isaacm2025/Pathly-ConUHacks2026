@@ -103,42 +103,41 @@ export default function PlaceCard({ place, rank, isHighlighted, isSelected, onHo
             </div>
           </div>
         )}
-      </div>
+      
+        {/* Review Button at bottom */}
+        <div className="absolute bottom-2 right-2">
+          <ReviewButton
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowReviewsDrawer(true);
+            }}
+            count={reviews.length}
+          />
+        </div>
 
-      {/* Review Button at bottom */}
-      <div className="px-4 pb-4">
-        <ReviewButton
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowReviewsDrawer(true);
-          }}
-          count={reviews.length}
+        {/* Review Modal */}
+        <ReviewModal
+          isOpen={showReviewModal}
+          onClose={() => setShowReviewModal(false)}
+          reviewType="location"
+          targetId={place.id}
+          targetName={place.name}
+          isDark={false}
         />
-      </div>
 
-      {/* Review Modal */}
-      <ReviewModal
-        isOpen={showReviewModal}
-        onClose={() => setShowReviewModal(false)}
-        reviewType="location"
-        targetId={place.id}
-        targetName={place.name}
-        isDark={false}
-      />
-
-      {/* Reviews Drawer */}
-      <ReviewsDrawer
-        isOpen={showReviewsDrawer}
-        onClose={() => setShowReviewsDrawer(false)}
-        reviewType="location"
-        targetId={place.id}
-        targetName={place.name}
-        onOpenReviewModal={() => {
-          setShowReviewsDrawer(false);
-          setShowReviewModal(true);
-        }}
-        isDark={false}
-      />
+        {/* Reviews Drawer */}
+        <ReviewsDrawer
+          isOpen={showReviewsDrawer}
+          onClose={() => setShowReviewsDrawer(false)}
+          reviewType="location"
+          targetId={place.id}
+          targetName={place.name}
+          onOpenReviewModal={() => {
+            setShowReviewsDrawer(false);
+            setShowReviewModal(true);
+          }}
+          isDark={false}
+        />
     </motion.div>
   );
 }

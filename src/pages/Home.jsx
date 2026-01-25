@@ -25,6 +25,8 @@ import DestinationSearch from "../components/night/DestinationSearch";
 import SafetyAlert from "../components/night/SafetyAlert";
 import NightSafetyPanel from "../components/night/NightSafetyPanel";
 import NightQuickStats from "../components/night/NightQuickStats";
+import StreetViewPreview from "../components/map/StreetViewPreview";
+import VoiceNavigator from "../components/navigation/VoiceNavigator";
 import useStreetActivity from "../hooks/useStreetActivity";
 
 // Montreal configuration - downtown area only for performance
@@ -142,6 +144,7 @@ function HomeContent() {
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [showAlert, setShowAlert] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
+  const [showStreetView, setShowStreetView] = useState(false);
 
   // Data states
   const [places, setPlaces] = useState([]);
@@ -642,7 +645,14 @@ function HomeContent() {
                           Area: 78%
                         </span>
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-4 gap-2">
+                        <button
+                          onClick={() => setShowStreetView(true)}
+                          className="flex flex-col items-center gap-1 p-2 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 transition-colors border border-purple-500/30"
+                        >
+                          <span className="text-purple-400 text-lg">👁️</span>
+                          <span className="text-[10px] text-purple-300">Preview</span>
+                        </button>
                         <button
                           onClick={() => window.location.href = "tel:911"}
                           className="flex flex-col items-center gap-1 p-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 transition-colors border border-rose-500/30"
@@ -658,13 +668,13 @@ function HomeContent() {
                           className="flex flex-col items-center gap-1 p-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 transition-colors border border-blue-500/30"
                         >
                           <span className="text-blue-400 text-lg">📍</span>
-                          <span className="text-[10px] text-blue-300">Share Location</span>
+                          <span className="text-[10px] text-blue-300">Share</span>
                         </button>
                         <button
                           className="flex flex-col items-center gap-1 p-2 rounded-lg bg-slate-700/50 hover:bg-slate-700 transition-colors border border-slate-600"
                         >
                           <span className="text-slate-400 text-lg">🔦</span>
-                          <span className="text-[10px] text-slate-400">Flashlight</span>
+                          <span className="text-[10px] text-slate-400">Light</span>
                         </button>
                       </div>
                     </div>
@@ -748,6 +758,46 @@ function HomeContent() {
         onClose={() => setShowPreferences(false)}
         isDark={isDark}
       />
+
+      {/* Street View Preview Modal */}
+      <AnimatePresence>
+        {showStreetView && destination && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+            onClick={() => setShowStreetView(false)}
+          >
+            <div onClick={(e) => e.stopPropagation()} className="max-w-lg w-full">
+              <StreetViewPreview
+                location={{
+                  lat: destination.latitude,
+                  lng: destination.longitude,
+                  label: destination.label
+                }}
+                routePoints={selectedRoute?.path?.slice(1, -1).filter((_, i) => i % 3 === 0).map((point, idx) => ({
+                  lat: point[0],
+                  lng: point[1],
+                  label: `Checkpoint ${idx + 1}`
+                })) || []}
+                isDark={true}
+                onClose={() => setShowStreetView(false)}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Voice Navigator - Only in Night Mode */}
+      {isDark && destination && (
+        <VoiceNavigator
+          destination={destination?.label || destination?.name}
+          route={selectedRoute}
+          streetData={streetActivity}
+          userLocation={scopedLocation}
+        />
+      )}
     </div>
   );
 }
