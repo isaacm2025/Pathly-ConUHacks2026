@@ -1,9 +1,25 @@
-
 import { motion } from "framer-motion";
 import { Clock, Star, MapPin, TrendingUp } from "lucide-react";
 import StatusPill from "../shared/StatusPill";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import ReviewButton from "../reviews/ReviewButton";
+import ReviewModal from "../reviews/ReviewModal";
+import ReviewsDrawer from "../reviews/ReviewsDrawer";
 
 export default function PlaceCard({ place, rank, isHighlighted, isSelected, onHover, onSelect }) {
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showReviewsDrawer, setShowReviewsDrawer] = useState(false);
+
+  // Fetch review count for this place
+  const { data: reviews = [] } = useQuery({
+    queryKey: ["reviews", "location", place.id],
+    queryFn: async () => {
+      return await base44.entities.Review.filter({ review_type: "location", target_id: place.id });
+    },
+  });
+
   const handleClick = () => {
     // Notify parent to show route on map - no modal, just show the path
     onSelect?.(place);
@@ -87,6 +103,42 @@ export default function PlaceCard({ place, rank, isHighlighted, isSelected, onHo
             </div>
           </div>
         )}
-      </motion.div>
+      </div>
+
+      {/* Review Button at bottom */}
+      <div className="px-4 pb-4">
+        <ReviewButton
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowReviewsDrawer(true);
+          }}
+          count={reviews.length}
+        />
+      </div>
+
+      {/* Review Modal */}
+      <ReviewModal
+        isOpen={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+        reviewType="location"
+        targetId={place.id}
+        targetName={place.name}
+        isDark={false}
+      />
+
+      {/* Reviews Drawer */}
+      <ReviewsDrawer
+        isOpen={showReviewsDrawer}
+        onClose={() => setShowReviewsDrawer(false)}
+        reviewType="location"
+        targetId={place.id}
+        targetName={place.name}
+        onOpenReviewModal={() => {
+          setShowReviewsDrawer(false);
+          setShowReviewModal(true);
+        }}
+        isDark={false}
+      />
+    </motion.div>
   );
 }
