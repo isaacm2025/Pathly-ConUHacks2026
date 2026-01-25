@@ -6,11 +6,7 @@ import { rankPlaces, calculateRouteSafetyScore, getSegmentColors, generateRouteD
 import { isNightTime, getRecommendedMode, getTimeContext } from "../utils/timeAware";
 import { motion, AnimatePresence } from "framer-motion";
 import TopBar from "../components/shared/TopBar";
-<<<<<<< HEAD
-import SearchBar from "../components/day/SearchBar";
-=======
 import ComfortProfileSheet from "../components/shared/ComfortProfileSheet";
->>>>>>> b919bd9aa9a5626e65709c35520b689ff5eda178
 import FilterChips from "../components/day/FilterChips";
 import PlacesList from "../components/day/PlacesList";
 import MapView from "../components/map/MapView";
@@ -19,22 +15,24 @@ import SafetyToggles from "../components/night/SafetyToggles";
 import DestinationBar from "../components/night/DestinationBar";
 import DestinationSearch from "../components/night/DestinationSearch";
 import SafetyAlert from "../components/night/SafetyAlert";
-import TurnByTurnPanel from "../components/night/TurnByTurnPanel";
-import ShareRouteModal from "../components/night/ShareRouteModal";
 import useStreetActivity from "../hooks/useStreetActivity";
-<<<<<<< HEAD
-// Mock data for demonstration
-=======
 
-// Montreal configuration
->>>>>>> b919bd9aa9a5626e65709c35520b689ff5eda178
+// Montreal configuration - downtown area only for performance
 const montrealCenter = [45.5019, -73.5674];
 const montrealBounds = {
-  north: 45.57,
-  south: 45.44,
-  east: -73.49,
-  west: -73.73,
+  north: 45.52,
+  south: 45.49,
+  east: -73.54,
+  west: -73.59,
 };
+
+// Only fetch main roads (not every tiny service road)
+const MAIN_ROAD_TYPES = [
+  "primary",
+  "secondary",
+  "tertiary",
+  "residential",
+];
 
 const isWithinMontreal = (location) => {
   const [lat, lng] = location;
@@ -46,47 +44,6 @@ const isWithinMontreal = (location) => {
   );
 };
 
-<<<<<<< HEAD
-const mockPlaces = [
-  { id: "1", name: "Crew Collective Cafe", type: "cafe", status: "not_busy", eta_minutes: 6, latitude: 45.5022, longitude: -73.5560 },
-  { id: "2", name: "Nautilus Plus", type: "gym", status: "moderate", eta_minutes: 11, latitude: 45.5012, longitude: -73.5755 },
-  { id: "3", name: "Grande Bibliotheque", type: "library", status: "not_busy", eta_minutes: 9, latitude: 45.5165, longitude: -73.5619 },
-  { id: "4", name: "WeWork Place Ville Marie", type: "cowork", status: "busy", eta_minutes: 14, latitude: 45.5007, longitude: -73.5702 },
-  { id: "5", name: "Cafe Olimpico", type: "cafe", status: "moderate", eta_minutes: 8, latitude: 45.5233, longitude: -73.6007 },
-];
-
-const mockRoutes = [
-  { 
-    id: "1", 
-    type: "safest", 
-    eta: 14, 
-    safetyScore: 94,
-    description: "More lighting and active streets",
-    path: [[45.5019, -73.5674], [45.5045, -73.5738], [45.5070, -73.5710], [45.5095, -73.5670]]
-  },
-  { 
-    id: "2", 
-    type: "balanced", 
-    eta: 11, 
-    safetyScore: 82,
-    description: "Good balance of speed and safety",
-    path: [[45.5019, -73.5674], [45.5035, -73.5630], [45.5065, -73.5640], [45.5095, -73.5670]]
-  },
-  { 
-    id: "3", 
-    type: "fastest", 
-    eta: 8, 
-    safetyScore: 68,
-    description: "Shortest path, some quieter areas",
-    path: [[45.5019, -73.5674], [45.5055, -73.5660], [45.5095, -73.5670]]
-  },
-];
-
-const mockDestination = {
-  label: "Home",
-  latitude: 45.5095,
-  longitude: -73.5670
-=======
 // Place type mapping for Google API
 const PLACE_TYPE_MAP = {
   cafe: "cafe",
@@ -95,7 +52,6 @@ const PLACE_TYPE_MAP = {
   cowork: "coworking_space",
   restaurant: "restaurant",
   bar: "bar",
->>>>>>> b919bd9aa9a5626e65709c35520b689ff5eda178
 };
 
 // Utility functions
@@ -155,15 +111,11 @@ function generateScoredRoutes(origin, destination, streetActivity, userPreferenc
 
 function HomeContent() {
   const { location: liveLocation, error: locationError } = useLiveLocation(montrealCenter);
-<<<<<<< HEAD
-  const { streetActivity, error: streetError } = useStreetActivity();
-  const [mode, setMode] = useState("day");
-  const [searchQuery, setSearchQuery] = useState("");
-=======
   // @ts-ignore - bounds is valid
-  const { streetActivity, error: streetError } = useStreetActivity({
+  const { streetActivity, isLoading: streetLoading, error: streetError } = useStreetActivity({
     bounds: montrealBounds,
     center: montrealCenter,
+    roadTypes: MAIN_ROAD_TYPES,
   });
 
   const { preferences, recordRouteSelection } = useUserPreferences();
@@ -172,20 +124,15 @@ function HomeContent() {
   const [mode, setMode] = useState(() => getRecommendedMode(montrealCenter[0]));
   const [autoModeEnabled, setAutoModeEnabled] = useState(true);
 
->>>>>>> b919bd9aa9a5626e65709c35520b689ff5eda178
   const [activeFilters, setActiveFilters] = useState([]);
   const [highlightedId, setHighlightedId] = useState(null);
   const [selectedRouteId, setSelectedRouteId] = useState("1");
   const [safetyToggles, setSafetyToggles] = useState(["well_lit", "busy_areas"]);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [showAlert, setShowAlert] = useState(false);
-<<<<<<< HEAD
-  const [showShareModal, setShowShareModal] = useState(false);
-=======
   const [showPreferences, setShowPreferences] = useState(false);
 
   // Data states
->>>>>>> b919bd9aa9a5626e65709c35520b689ff5eda178
   const [places, setPlaces] = useState([]);
   const [rankedPlaces, setRankedPlaces] = useState([]);
   const [routes, setRoutes] = useState([]);
@@ -201,7 +148,6 @@ function HomeContent() {
 
   // Callback when map loads
   const handleMapLoad = useCallback((map) => {
-    console.log("Map loaded in Home, saving reference");
     setMapInstance(map);
   }, []);
 
@@ -234,10 +180,8 @@ function HomeContent() {
 
       // Use Google Places API if map is available
       if (mapInstance) {
-        console.log("Fetching places from Google Places API...");
         results = await fetchNearbyPlacesFromGoogle(mapInstance, scopedLocation[0], scopedLocation[1], placeType, 1500);
       } else {
-        console.log("Map not ready, using fallback...");
         results = await fetchNearbyPlaces(scopedLocation[0], scopedLocation[1], placeType, 1500, false);
       }
 
@@ -263,7 +207,6 @@ function HomeContent() {
         };
       });
 
-      console.log("Loaded", transformedPlaces.length, "places");
       setPlaces(transformedPlaces);
     } catch (error) {
       console.error("Error fetching places:", error);
@@ -317,8 +260,6 @@ function HomeContent() {
         [destLat, destLng]
       ];
 
-      console.log("Creating day mode route:", { origin: [originLat, originLng], dest: [destLat, destLng], path: routePath });
-
       setDayModeRoute({
         id: "day-route",
         type: "walking",
@@ -348,56 +289,12 @@ function HomeContent() {
   const handleRouteSelect = (routeId) => { setSelectedRouteId(routeId); const route = routes.find(r => r.id === routeId); if (route) recordRouteSelection(route.type); };
   const handleDestinationSelect = (dest) => setDestination(dest);
   const handlePlaceSelect = (place) => {
-    console.log("Place selected:", place);
     // Toggle selection - if same place clicked, deselect it
     setSelectedPlace(prev => {
       const newValue = prev?.id === place.id ? null : place;
-      console.log("Setting selectedPlace to:", newValue);
       return newValue;
     });
   };
-<<<<<<< HEAD
-  
-  const handleFilterToggle = (filterId) => {
-    setActiveFilters(prev => 
-      prev.includes(filterId) 
-        ? prev.filter(f => f !== filterId)
-        : [...prev, filterId]
-    );
-  };
-  
-  const handleSafetyToggle = (toggleId) => {
-    setSafetyToggles(prev =>
-      prev.includes(toggleId)
-        ? prev.filter(t => t !== toggleId)
-        : [...prev, toggleId]
-    );
-  };
-  
-  // Filter places based on search query and active filters
-  const filteredPlaces = places.filter(place => {
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const matchesName = place.name.toLowerCase().includes(query);
-      const matchesType = place.type.toLowerCase().includes(query);
-      if (!matchesName && !matchesType) return false;
-    }
-    
-    // Active filters
-    if (activeFilters.length > 0) {
-      if (activeFilters.includes("distance") && place.eta_minutes > 10) return false;
-      if (activeFilters.includes("low_crowd") && place.status === "busy") return false;
-      if (activeFilters.includes("cafe") && place.type !== "cafe") return false;
-      if (activeFilters.includes("gym") && place.type !== "gym") return false;
-    }
-    
-    return true;
-  });
-  
-  const sortedPlaces = filteredPlaces;
-=======
->>>>>>> b919bd9aa9a5626e65709c35520b689ff5eda178
 
   const selectedRoute = routes.find(r => r.id === selectedRouteId);
 
@@ -428,14 +325,6 @@ function HomeContent() {
           >
             {/* Left Panel - Places */}
             <div className="w-[420px] flex flex-col flex-shrink-0">
-<<<<<<< HEAD
-              <div className="mb-3">
-                <SearchBar 
-                  value={searchQuery}
-                  onChange={setSearchQuery}
-                  placeholder="Search places..."
-                />
-=======
               {/* Time Context Header */}
               <div className="mb-3 px-1">
                 <div className="flex items-center gap-2 text-sm">
@@ -447,7 +336,6 @@ function HomeContent() {
                     </>
                   )}
                 </div>
->>>>>>> b919bd9aa9a5626e65709c35520b689ff5eda178
               </div>
 
               <div className="mb-4">
@@ -498,8 +386,8 @@ function HomeContent() {
                 onMapLoad={handleMapLoad}
                 isDark={false}
                 userLocation={scopedLocation}
-                mapCenter={selectedPlace ? [selectedPlace.latitude, selectedPlace.longitude] : montrealCenter}
-                zoom={selectedPlace ? 15 : 14}
+                mapCenter={selectedPlace ? [selectedPlace.latitude, selectedPlace.longitude] : scopedLocation}
+                zoom={15}
                 streetActivity={streetActivity}
                 routes={[]}
                 selectedRouteId={null}
@@ -556,68 +444,6 @@ function HomeContent() {
               message="Entering lower-activity area in 120m"
               isVisible={showAlert}
             />
-<<<<<<< HEAD
-            
-            {/* Left Panel - Routes & Navigation */}
-            <div className="w-[420px] flex flex-col flex-shrink-0">
-              {!selectedRoute ? (
-                <>
-                  <div className="mb-3">
-                    <SearchBar 
-                      value={searchQuery}
-                      onChange={setSearchQuery}
-                      placeholder="Search places..."
-                    />
-                  </div>
-
-                  <div className="mb-4">
-                    <SafetyToggles 
-                      active={safetyToggles}
-                      onToggle={handleSafetyToggle}
-                    />
-                  </div>
-                  
-                  <div className="space-y-3 overflow-y-auto pr-1 -mr-1">
-                    {routes.map((route) => (
-                      <RouteCard
-                        key={route.id}
-                        route={route}
-                        isSelected={selectedRouteId === route.id}
-                        onSelect={setSelectedRouteId}
-                      />
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => setSelectedRouteId(null)}
-                    className="text-sm text-slate-400 hover:text-white transition-colors text-left"
-                  >
-                    ← Back to routes
-                  </button>
-                  <TurnByTurnPanel 
-                    route={selectedRoute}
-                    destination={mockDestination}
-                    onShare={() => setShowShareModal(true)}
-                  />
-                </>
-              )}
-            </div>
-            
-            {/* Right Panel - Map */}
-            <div className="flex-1">
-              <MapView 
-                isDark={true}
-                routes={mockRoutes}
-                highlightedId={highlightedId}
-                onMarkerHover={setHighlightedId}
-                userLocation={scopedLocation}
-                destination={mockDestination}
-                mapCenter={montrealCenter}
-                zoom={13}
-                streetActivity={streetActivity}
-=======
 
             {/* Left Panel - Routes */}
             <div className="w-[400px] flex flex-col gap-4 flex-shrink-0">
@@ -626,7 +452,6 @@ function HomeContent() {
                 onDestinationSelect={handleDestinationSelect}
                 isDark={true}
                 currentDestination={destination}
->>>>>>> b919bd9aa9a5626e65709c35520b689ff5eda178
               />
 
               {destination ? (
@@ -693,8 +518,8 @@ function HomeContent() {
                 selectedRouteId={selectedRouteId}
                 userLocation={scopedLocation}
                 destination={destination}
-                mapCenter={montrealCenter}
-                zoom={14}
+                mapCenter={scopedLocation}
+                zoom={15}
                 streetActivity={streetActivity}
                 highlightedId={null}
                 onMarkerHover={() => {}}
@@ -709,21 +534,6 @@ function HomeContent() {
             </div>
 
             {/* Destination Bar */}
-<<<<<<< HEAD
-            <DestinationBar 
-              destination={mockDestination}
-              eta={selectedRoute?.eta}
-              routeType={selectedRoute?.type}
-            />
-            
-            {/* Share Route Modal */}
-            <ShareRouteModal 
-              isOpen={showShareModal}
-              onClose={() => setShowShareModal(false)}
-              route={selectedRoute}
-              destination={mockDestination}
-            />
-=======
             {destination && (
               <DestinationBar
                 destination={destination}
@@ -731,7 +541,6 @@ function HomeContent() {
                 routeType={selectedRoute?.type}
               />
             )}
->>>>>>> b919bd9aa9a5626e65709c35520b689ff5eda178
           </motion.div>
         )}
       </AnimatePresence>

@@ -57,10 +57,8 @@ export async function fetchNearbyPlacesFromGoogle(map, lat, lng, type = '', radi
 
     service.nearbySearch(request, (results, status) => {
       if (status === window.google.maps.places.PlacesServiceStatus.OK && results) {
-        console.log("Google Places API returned:", results.length, "places");
         resolve(results);
       } else {
-        console.warn("Google Places API error:", status, "using mock data");
         resolve(mockPlaces);
       }
     });
@@ -69,7 +67,6 @@ export async function fetchNearbyPlacesFromGoogle(map, lat, lng, type = '', radi
 
 // Legacy function for backward compatibility - returns mock data
 export async function fetchNearbyPlaces(lat, lng, type = '', radius = 1500, opennow = false) {
-  console.log("fetchNearbyPlaces called - returning mock data (use fetchNearbyPlacesFromGoogle for real data)");
   return mockPlaces;
 }
 

@@ -9,7 +9,7 @@ const toggles = [
 
 export default function SafetyToggles({ active, onToggle }) {
   return (
-    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+    <div className="flex items-center gap-2">
       {toggles.map((toggle) => {
         const Icon = toggle.icon;
         const isActive = active.includes(toggle.id);
@@ -20,16 +20,16 @@ export default function SafetyToggles({ active, onToggle }) {
             whileTap={{ scale: 0.95 }}
             onClick={() => onToggle(toggle.id)}
             className={`
-              flex items-center gap-1.5 px-3 py-1.5 rounded-full
-              text-sm font-medium whitespace-nowrap transition-all duration-200
+              flex items-center gap-2 px-3 py-2 rounded-xl
+              text-sm font-medium transition-all duration-200
               ${isActive
-                ? "bg-teal-500/20 text-teal-300 border border-teal-500/30"
-                : "bg-slate-800/60 text-teal-300/80 border border-slate-700/70 hover:bg-slate-700"
+                ? "bg-teal-500/20 text-teal-400 border border-teal-500/30"
+                : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
               }
             `}
           >
-            <Icon className="w-3.5 h-3.5" />
-            {toggle.label}
+            <Icon className="w-4 h-4" />
+            <span className="hidden sm:inline">{toggle.label}</span>
           </motion.button>
         );
       })}

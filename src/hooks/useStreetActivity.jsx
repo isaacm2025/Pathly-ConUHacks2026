@@ -59,7 +59,11 @@ const getDistance = (a, b) => Math.hypot(a.lat - b.lat, a.lng - b.lng);
 
 const estimatePeople = ({ id, path, highway, center }) => {
   const pathCenter = getPathCenter(path);
-  const distance = getDistance(pathCenter, center);
+  // Handle center as array [lat, lng] or object {lat, lng}
+  const centerObj = Array.isArray(center)
+    ? { lat: center[0], lng: center[1] }
+    : center;
+  const distance = getDistance(pathCenter, centerObj);
   const base = 1 - clamp(distance / 0.085, 0, 1);
   const noise = seededRandom(id);
   const roadWeight = ROAD_ACTIVITY_WEIGHTS[highway] ?? 0.75;

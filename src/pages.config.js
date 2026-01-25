@@ -1,19 +1,17 @@
 import Home from './pages/Home';
-import Index from './pages/Index';
 import Landing from './pages/Landing';
-import SignUp from './pages/SignUp';
+import Index from './pages/Index';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "Home": Home,
-    "Index": Index,
     "Landing": Landing,
-    "SignUp": SignUp,
+    "Index": Index,
 }
 
 export const pagesConfig = {
-    mainPage: "Index",
+    mainPage: "Landing",
     Pages: PAGES,
     Layout: __Layout,
 };
