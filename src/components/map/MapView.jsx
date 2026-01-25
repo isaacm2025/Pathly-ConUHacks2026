@@ -263,22 +263,22 @@ export default function MapView({
                 path={route.path.map(([lat, lng]) => ({ lat, lng }))}
                 options={{
                   strokeColor: routeColor,
-                  strokeWeight: 3,
-                  strokeOpacity: 0.2,
+                  strokeWeight: 5,
+                  strokeOpacity: 0.5,
                   zIndex: 1,
                 }}
               />
             );
           }
 
-          // Selected route renders with the route type color
+          // Selected route renders with the route type color - darker and thicker
           return (
             <Polyline
               key={route.id}
               path={route.path.map(([lat, lng]) => ({ lat, lng }))}
               options={{
                 strokeColor: routeColor,
-                strokeWeight: 6,
+                strokeWeight: 8,
                 strokeOpacity: 1,
                 zIndex: 10,
               }}
@@ -293,9 +293,9 @@ export default function MapView({
             options={{
               suppressMarkers: true,
               polylineOptions: {
-                strokeColor: "#3B82F6",
-                strokeWeight: 5,
-                strokeOpacity: 0.8,
+                strokeColor: "#1E40AF",
+                strokeWeight: 7,
+                strokeOpacity: 0.95,
               },
             }}
           />
@@ -309,9 +309,9 @@ export default function MapView({
               { lat: destination.latitude, lng: destination.longitude }
             ]}
             options={{
-              strokeColor: "#3B82F6",
-              strokeWeight: 5,
-              strokeOpacity: 0.8,
+              strokeColor: "#1E40AF",
+              strokeWeight: 7,
+              strokeOpacity: 0.95,
               zIndex: 50,
             }}
           />
@@ -332,7 +332,7 @@ export default function MapView({
             key={`incident-${incident.id || index}`}
             position={{ lat: incident.latitude, lng: incident.longitude }}
             icon={{
-              url: incident.severity === 'high' 
+              url: incident.severity === 'high'
                 ? 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
                 : incident.severity === 'medium'
                 ? 'https://maps.google.com/mapfiles/ms/icons/orange-dot.png'
