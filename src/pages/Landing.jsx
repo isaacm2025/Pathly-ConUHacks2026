@@ -30,14 +30,17 @@ export default function Landing() {
     // Show logo after particles converge (3 seconds)
     const logoTimer = setTimeout(() => setShowLogo(true), 3000);
     
-    // Show button after logo settles
-    const buttonTimer = setTimeout(() => setShowButton(true), 3500);
+    // Show button and auto-play audio after logo settles
+    const buttonTimer = setTimeout(() => {
+      setShowButton(true);
+      speak(LANDING_TEXT); // Auto-play audio
+    }, 3500);
     
     return () => {
       clearTimeout(logoTimer);
       clearTimeout(buttonTimer);
     };
-  }, []);
+  }, [speak]);
   
   const handleGetStarted = () => {
     setIsDisintegrating(true);
@@ -94,19 +97,21 @@ export default function Landing() {
           onComplete={handleDisintegrationComplete}
         />
         
-        {/* Audio Button */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: showButton ? 1 : 0 }}
-          transition={{ duration: 0.5 }}
-          className="absolute top-8 right-8 z-20"
-        >
-          <AudioButton
-            onClick={handleAudioClick}
-            isLoading={isLoading}
-            isPlaying={isPlaying}
-          />
-        </motion.div>
+        {/* Audio Button - Hidden but still available for replay */}
+        {false && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: showButton ? 1 : 0 }}
+            transition={{ duration: 0.5 }}
+            className="absolute top-8 right-8 z-20"
+          >
+            <AudioButton
+              onClick={handleAudioClick}
+              isLoading={isLoading}
+              isPlaying={isPlaying}
+            />
+          </motion.div>
+        )}
         
         {/* Logo & Brand */}
         <LogoReveal 
