@@ -16,6 +16,8 @@ import ComfortProfileSheet from "../components/shared/ComfortProfileSheet";
 import FilterChips from "../components/day/FilterChips";
 import PlacesList from "../components/day/PlacesList";
 import MapView from "../components/map/MapView";
+import AISuggestionButton from "../components/map/AISuggestionButton";
+import AIOverview from "../components/ai/AIOverview";
 import RouteCard from "../components/night/RouteCard";
 import SafetyToggles from "../components/night/SafetyToggles";
 import DestinationBar from "../components/night/DestinationBar";
@@ -448,6 +450,13 @@ function HomeContent() {
                 />
               </div>
 
+              {/* AI Overview Section */}
+              <AIOverview 
+                places={rankedPlaces} 
+                timeContext={timeContext}
+                isDark={false}
+              />
+
               <div className="flex-1 overflow-y-auto pr-1 -mr-1">
                 {isLoadingPlaces ? (
                   <div className="flex items-center justify-center py-16">
@@ -481,7 +490,7 @@ function HomeContent() {
             </div>
 
             {/* Right Panel - Map */}
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col relative">
               <MapView
                 places={rankedPlaces}
                 highlightedId={highlightedId}
@@ -495,6 +504,13 @@ function HomeContent() {
                 routes={[]}
                 selectedRouteId={null}
                 destination={selectedPlace ? { latitude: selectedPlace.latitude, longitude: selectedPlace.longitude, label: selectedPlace.name } : null}
+              />
+              
+              {/* AI Suggestion Button */}
+              <AISuggestionButton 
+                places={rankedPlaces} 
+                isDark={false} 
+                userLocation={scopedLocation}
               />
 
               {/* Route Info Card */}
@@ -625,7 +641,7 @@ function HomeContent() {
             </div>
 
             {/* Right Panel - Map */}
-            <div className="flex-1">
+            <div className="flex-1 relative">
               <MapView
                 isDark={true}
                 routes={routes}
@@ -639,6 +655,14 @@ function HomeContent() {
                 onMarkerHover={() => {}}
                 onMapLoad={handleMapLoad}
               />
+              
+              {/* AI Suggestion Button */}
+              <AISuggestionButton 
+                places={[]} 
+                isDark={true} 
+                userLocation={scopedLocation}
+              />
+              
               {streetError && (
                 <div className="mt-2 text-xs text-rose-200">Street overlay failed to load. Please try again.</div>
               )}
