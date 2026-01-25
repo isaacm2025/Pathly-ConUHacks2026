@@ -1,11 +1,82 @@
 import { useState } from "react";
 
-export default function LoginOverlay({ onClose }) {
-  const [priority, setPriority] = useState("safety");
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
-  const handleSubmit = (event) => {
+export default function LoginOverlay({ onClose }) {
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [priority, setPriority] = useState("safety");
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    onClose?.();
+    if (isSubmitting) return;
+
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedUsername = username.trim();
+
+    if (!trimmedEmail || !trimmedUsername || !password) {
+      setError("Please fill out all fields.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError("");
+
+    try {
+      const registerResponse = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: trimmedEmail,
+          username: trimmedUsername,
+          password,
+          priority
+        })
+      });
+
+      if (registerResponse.ok) {
+        const data = await registerResponse.json();
+        localStorage.setItem("pathly_token", data.token);
+        localStorage.setItem("pathly_priority", data.user?.priority || priority);
+        localStorage.setItem("pathly_user", JSON.stringify(data.user || {}));
+        onClose?.();
+        return;
+      }
+
+      if (registerResponse.status === 409) {
+        const loginResponse = await fetch(`${API_BASE_URL}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: trimmedEmail,
+            password
+          })
+        });
+
+        if (loginResponse.ok) {
+          const data = await loginResponse.json();
+          localStorage.setItem("pathly_token", data.token);
+          localStorage.setItem("pathly_priority", data.user?.priority || priority);
+          localStorage.setItem("pathly_user", JSON.stringify(data.user || {}));
+          onClose?.();
+          return;
+        }
+
+        const loginError = await loginResponse.json().catch(() => ({}));
+        setError(loginError.error || "Login failed.");
+        return;
+      }
+
+      const registerError = await registerResponse.json().catch(() => ({}));
+      setError(registerError.error || "Registration failed.");
+    } catch (err) {
+      setError("Unable to reach the server.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -32,6 +103,9 @@ export default function LoginOverlay({ onClose }) {
                 type="email"
                 autoComplete="email"
                 placeholder="you@pathly.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                disabled={isSubmitting}
                 className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-teal-400/60 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
               />
             </div>
@@ -45,6 +119,9 @@ export default function LoginOverlay({ onClose }) {
                 type="text"
                 autoComplete="username"
                 placeholder="pathfinder"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                disabled={isSubmitting}
                 className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-teal-400/60 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
               />
             </div>
@@ -58,6 +135,9 @@ export default function LoginOverlay({ onClose }) {
                 type="password"
                 autoComplete="current-password"
                 placeholder="********"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                disabled={isSubmitting}
                 className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-teal-400/60 focus:outline-none focus:ring-2 focus:ring-teal-500/30"
               />
             </div>
@@ -69,6 +149,7 @@ export default function LoginOverlay({ onClose }) {
                   type="button"
                   onClick={() => setPriority("safety")}
                   aria-pressed={priority === "safety"}
+                  disabled={isSubmitting}
                   className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
                     priority === "safety"
                       ? "border-teal-300/60 bg-teal-500/15 text-teal-100"
@@ -81,6 +162,7 @@ export default function LoginOverlay({ onClose }) {
                   type="button"
                   onClick={() => setPriority("speed")}
                   aria-pressed={priority === "speed"}
+                  disabled={isSubmitting}
                   className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
                     priority === "speed"
                       ? "border-amber-300/60 bg-amber-500/15 text-amber-100"
@@ -92,11 +174,18 @@ export default function LoginOverlay({ onClose }) {
               </div>
             </div>
 
+            {error && (
+              <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
+                {error}
+              </p>
+            )}
+
             <button
               type="submit"
-              className="mt-2 w-full rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-teal-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:brightness-110"
+              disabled={isSubmitting}
+              className="mt-2 w-full rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-teal-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              Enter Dashboard
+              {isSubmitting ? "Saving..." : "Enter Dashboard"}
             </button>
           </form>
 
