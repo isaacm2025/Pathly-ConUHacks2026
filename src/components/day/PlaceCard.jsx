@@ -82,6 +82,7 @@ export default function PlaceCard({ place, rank, isHighlighted, isSelected, onHo
                 {place.rating.toFixed(1)}
               </span>
             )}
+            <StatusPill status={place.status} />
           </div>
           {place.vicinity && (
             <p className="text-xs text-slate-400 mt-1 truncate flex items-center gap-1">
@@ -89,26 +90,23 @@ export default function PlaceCard({ place, rank, isHighlighted, isSelected, onHo
               {place.vicinity}
             </p>
           )}
-
-          {/* Status and Score - Centered row below */}
-          <div className="flex items-center justify-center gap-3 mt-3">
-            <StatusPill status={place.status} />
-            {place.score && (
-              <div className={`
-                px-2.5 py-1.5 rounded-lg text-xs font-semibold
-                ${getScoreColor(place.score)}
-              `}>
-                <div className="flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" />
-                  {place.score}
-                </div>
-              </div>
-            )}
-          </div>
         </div>
 
+        {/* Score Badge */}
+        {place.score && (
+          <div className={`
+            flex-shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-semibold
+            ${getScoreColor(place.score)}
+          `}>
+            <div className="flex items-center gap-1">
+              <TrendingUp className="w-3 h-3" />
+              {place.score}
+            </div>
+          </div>
+        )}
+      
         {/* Review and Favorite Buttons at bottom */}
-        <div className="absolute bottom-3 right-3 flex items-center gap-3">
+        <div className="absolute bottom-2 right-2 flex items-center gap-2">
           <ReviewButton
             onClick={(e) => {
               e.stopPropagation();
