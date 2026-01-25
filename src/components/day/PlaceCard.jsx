@@ -104,9 +104,9 @@ export default function PlaceCard({ place, rank, isHighlighted, isSelected, onHo
             </div>
           </div>
         )}
-      
+
         {/* Review and Favorite Buttons at bottom */}
-        <div className="absolute bottom-2 right-2 flex items-center gap-2">
+        <div className="absolute bottom-3 right-3 flex items-center gap-3">
           <ReviewButton
             onClick={(e) => {
               e.stopPropagation();
