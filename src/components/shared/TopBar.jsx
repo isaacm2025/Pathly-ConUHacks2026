@@ -1,6 +1,8 @@
 import ModeToggle from "../mode/ModeToggle";
 import LiveIndicator from "./LiveIndicator";
-import { User, Settings, Clock } from "lucide-react";
+import { User, Settings, Clock, Shield } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { createPageUrl } from "../../utils";
 
 export default function TopBar({
   mode,
@@ -11,6 +13,8 @@ export default function TopBar({
   autoModeEnabled,
   timeContext
 }) {
+  const navigate = useNavigate();
+
   return (
     <div className={`
       flex items-center justify-between px-4 py-3
@@ -34,6 +38,22 @@ export default function TopBar({
       <LiveIndicator lastUpdate={lastUpdate} isDark={isDark} />
 
       <div className="flex items-center gap-2">
+        {/* Emergency Contacts Button */}
+        <button
+          onClick={() => navigate(createPageUrl("EmergencyContacts"))}
+          className={`
+            w-9 h-9 rounded-full flex items-center justify-center
+            transition-colors
+            ${isDark
+              ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-red-300"
+              : "bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600"
+            }
+          `}
+          title="Emergency Contacts"
+        >
+          <Shield className="w-4 h-4" />
+        </button>
+
         {/* Preferences Button */}
         <button
           onClick={onOpenPreferences}
