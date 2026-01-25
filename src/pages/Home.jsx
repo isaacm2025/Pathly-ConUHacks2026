@@ -265,14 +265,21 @@ function HomeContent() {
         }));
 
         setRoutes(enrichedRoutes);
-        setSelectedRouteId(enrichedRoutes[0]?.id || "1");
+        // Only set initial selection when destination changes, not on every update
+        setSelectedRouteId(prev => {
+          // If we already have a valid selection that exists in new routes, keep it
+          const prevExists = enrichedRoutes.some(r => r.id === prev);
+          if (prevExists) return prev;
+          // Otherwise select the first (safest) route
+          return enrichedRoutes[0]?.id || "1";
+        });
       } catch (error) {
         console.error("Error fetching routes:", error);
         // Fall back to simple routes if Google API fails
         if (!cancelled) {
           const fallbackRoutes = generateFallbackRoutes(scopedLocation, destination, streetActivity, preferences);
           setRoutes(fallbackRoutes);
-          setSelectedRouteId("1");
+          setSelectedRouteId(prev => prev || "1");
         }
       } finally {
         if (!cancelled) {
@@ -286,7 +293,22 @@ function HomeContent() {
     return () => {
       cancelled = true;
     };
-  }, [destination, scopedLocation, streetActivity, preferences, mode]);
+  }, [destination, scopedLocation, mode]); // Removed streetActivity and preferences to prevent re-fetching
+
+  // Update route safety scores and colors when streetActivity or preferences change
+  useEffect(() => {
+    if (routes.length === 0) return;
+
+    // Re-score existing routes with updated activity data
+    const updatedRoutes = routes.map(route => ({
+      ...route,
+      safetyScore: route.safetyScore, // Keep existing score for now
+      segmentColors: getRouteSegmentColors(route, streetActivity, preferences),
+      description: generateDescription(route, streetActivity),
+    }));
+
+    setRoutes(updatedRoutes);
+  }, [streetActivity, preferences]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Generate route when place is selected in Day mode - uses Google Directions API
   useEffect(() => {

@@ -247,48 +247,45 @@ export default function MapView({
           />
         ))}
 
-        {/* Routes for night mode - with color-coded segments */}
+        {/* Routes for night mode - color matches card type */}
         {routes.map((route) => {
           const isSelected = route.id === selectedRouteId;
-          const segments = getRouteSegments(route);
+          const routeColor = routeColors[route.type] || "#3B82F6";
 
-          // If route has segment colors, render each segment separately
-          if (segments.length > 0 && isSelected) {
+          // Only render selected route with full visibility
+          // Non-selected routes are hidden or very faint
+          if (!isSelected) {
             return (
-              <React.Fragment key={route.id}>
-                {segments.map((segment, idx) => (
-                  <Polyline
-                    key={`${route.id}-segment-${idx}`}
-                    path={segment.path.map(([lat, lng]) => ({ lat, lng }))}
-                    options={{
-                      strokeColor: segment.color,
-                      strokeWeight: 6,
-                      strokeOpacity: 1,
-                      zIndex: 3,
-                    }}
-                  />
-                ))}
-              </React.Fragment>
+              <Polyline
+                key={route.id}
+                path={route.path.map(([lat, lng]) => ({ lat, lng }))}
+                options={{
+                  strokeColor: routeColor,
+                  strokeWeight: 3,
+                  strokeOpacity: 0.2,
+                  zIndex: 1,
+                }}
+              />
             );
           }
 
-          // Non-selected routes render as single polyline with lower opacity
+          // Selected route renders with the route type color
           return (
             <Polyline
               key={route.id}
               path={route.path.map(([lat, lng]) => ({ lat, lng }))}
               options={{
-                strokeColor: routeColors[route.type] || "#3B82F6",
-                strokeWeight: isSelected ? 6 : 4,
-                strokeOpacity: isSelected ? 0.9 : 0.4,
-                zIndex: isSelected ? 3 : 2,
+                strokeColor: routeColor,
+                strokeWeight: 6,
+                strokeOpacity: 1,
+                zIndex: 10,
               }}
             />
           );
         })}
 
-        {/* Direct route line when destination is set */}
-        {directions && (
+        {/* Direct route line when destination is set - only for day mode (when no routes array) */}
+        {directions && routes.length === 0 && (
           <DirectionsRenderer
             directions={directions}
             options={{
@@ -302,8 +299,8 @@ export default function MapView({
           />
         )}
 
-        {/* Fallback: Simple straight line if directions not available but destination is set */}
-        {destination && !directions && (
+        {/* Fallback: Simple straight line if directions not available but destination is set (day mode only) */}
+        {destination && !directions && routes.length === 0 && (
           <Polyline
             path={[
               { lat: userLocation[0], lng: userLocation[1] },

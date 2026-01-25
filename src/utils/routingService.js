@@ -304,12 +304,15 @@ export function classifyRoutes(routes, streetActivity = [], userPreferences = {}
   const byEta = [...scoredRoutes].sort((a, b) => a.eta - b.eta);
   const fastestId = byEta[0]?.id;
 
-  // Classify routes
+  // Classify routes - ensure we have safest, fastest, and balanced (if 3+ routes)
   return scoredRoutes.map((route, index) => {
     let type;
     if (index === 0) {
       type = "safest";
-    } else if (route.id === fastestId && index !== 0) {
+    } else if (route.id === fastestId) {
+      type = "fastest";
+    } else if (index === scoredRoutes.length - 1 && scoredRoutes.length >= 2) {
+      // Last route (lowest safety score) is fastest if not already assigned
       type = "fastest";
     } else {
       type = "balanced";
