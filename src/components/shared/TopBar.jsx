@@ -71,14 +71,18 @@ export default function TopBar({
         </button>
 
         {/* Profile Button */}
-        <button className={`
-          w-9 h-9 rounded-full flex items-center justify-center
-          transition-colors
-          ${isDark
-            ? "bg-slate-800 text-slate-400 hover:bg-slate-700"
-            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-          }
-        `}>
+        <button 
+          onClick={() => navigate(createPageUrl("Profile"))}
+          className={`
+            w-9 h-9 rounded-full flex items-center justify-center
+            transition-colors
+            ${isDark
+              ? "bg-slate-800 text-slate-400 hover:bg-slate-700"
+              : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+            }
+          `}
+          title="Profile"
+        >
           <User className="w-4 h-4" />
         </button>
       </div>

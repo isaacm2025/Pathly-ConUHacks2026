@@ -7,6 +7,7 @@ import { base44 } from "@/api/base44Client";
 import ReviewButton from "../reviews/ReviewButton";
 import ReviewModal from "../reviews/ReviewModal";
 import ReviewsDrawer from "../reviews/ReviewsDrawer";
+import FavoriteButton from "../favorites/FavoriteButton";
 
 export default function PlaceCard({ place, rank, isHighlighted, isSelected, onHover, onSelect }) {
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -104,14 +105,19 @@ export default function PlaceCard({ place, rank, isHighlighted, isSelected, onHo
           </div>
         )}
       
-        {/* Review Button at bottom */}
-        <div className="absolute bottom-2 right-2">
+        {/* Review and Favorite Buttons at bottom */}
+        <div className="absolute bottom-2 right-2 flex items-center gap-2">
           <ReviewButton
             onClick={(e) => {
               e.stopPropagation();
               setShowReviewsDrawer(true);
             }}
             count={reviews.length}
+          />
+          <FavoriteButton
+            type="location"
+            data={place}
+            isDark={false}
           />
         </div>
 

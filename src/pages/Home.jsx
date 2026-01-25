@@ -393,15 +393,54 @@ function HomeContent() {
     }
   }, [isDark, destination]);
 
+  // Log route history when route is selected in night mode
+  const logHistoryMutation = useMutation({
+    mutationFn: (historyData) => base44.entities.RouteHistory.create(historyData),
+  });
+
   const handleModeToggle = () => { setAutoModeEnabled(false); setMode(mode === "day" ? "night" : "day"); setSelectedPlace(null); };
   const handleFilterToggle = (filterId) => setActiveFilters(prev => prev.includes(filterId) ? prev.filter(f => f !== filterId) : [...prev, filterId]);
   const handleSafetyToggle = (toggleId) => setSafetyToggles(prev => prev.includes(toggleId) ? prev.filter(t => t !== toggleId) : [...prev, toggleId]);
-  const handleRouteSelect = (routeId) => { setSelectedRouteId(routeId); const route = routes.find(r => r.id === routeId); if (route) recordRouteSelection(route.type); };
+  const handleRouteSelect = (routeId) => { 
+    setSelectedRouteId(routeId); 
+    const route = routes.find(r => r.id === routeId); 
+    if (route) {
+      recordRouteSelection(route.type);
+      // Log to history in night mode
+      if (mode === "night" && destination) {
+        logHistoryMutation.mutate({
+          origin_lat: scopedLocation[0],
+          origin_lng: scopedLocation[1],
+          origin_label: "Current Location",
+          dest_lat: destination.latitude,
+          dest_lng: destination.longitude,
+          dest_label: destination.label,
+          route_type: route.type,
+          mode: "night",
+          eta_minutes: route.eta,
+        });
+      }
+    }
+  };
   const handleDestinationSelect = (dest) => setDestination(dest);
   const handlePlaceSelect = (place) => {
     // Toggle selection - if same place clicked, deselect it
     setSelectedPlace(prev => {
       const newValue = prev?.id === place.id ? null : place;
+      // Log to history when a place is selected in day mode
+      if (newValue && mode === "day") {
+        logHistoryMutation.mutate({
+          origin_lat: scopedLocation[0],
+          origin_lng: scopedLocation[1],
+          origin_label: "Current Location",
+          dest_lat: place.latitude,
+          dest_lng: place.longitude,
+          dest_label: place.name,
+          route_type: "walking",
+          mode: "day",
+          eta_minutes: place.eta_minutes,
+        });
+      }
       return newValue;
     });
   };
