@@ -47,6 +47,7 @@ export default function RouteCard({ route, isSelected, onSelect }) {
   const Icon = config.icon;
   
   return (
+    <>
     <motion.button
       whileTap={{ scale: 0.98 }}
       onClick={() => onSelect(route.id)}
@@ -119,20 +120,20 @@ export default function RouteCard({ route, isSelected, onSelect }) {
           />
         </motion.div>
       )}
-      </motion.button>
+    </motion.button>
 
-      {/* Review Modal */}
-      <ReviewModal
+    {/* Review Modal */}
+    <ReviewModal
       isOpen={showReviewModal}
       onClose={() => setShowReviewModal(false)}
       reviewType="route"
       targetId={route.id}
       targetName={`${route.type} route`}
       isDark={true}
-      />
+    />
 
-      {/* Reviews Drawer */}
-      <ReviewsDrawer
+    {/* Reviews Drawer */}
+    <ReviewsDrawer
       isOpen={showReviewsDrawer}
       onClose={() => setShowReviewsDrawer(false)}
       reviewType="route"
@@ -143,6 +144,7 @@ export default function RouteCard({ route, isSelected, onSelect }) {
         setShowReviewModal(true);
       }}
       isDark={true}
-      />
-      );
-      }
+    />
+    </>
+  );
+}
