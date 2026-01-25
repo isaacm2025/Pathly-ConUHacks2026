@@ -300,19 +300,32 @@ export function classifyRoutes(routes, streetActivity = [], userPreferences = {}
   // Sort by safety score (descending)
   scoredRoutes.sort((a, b) => b.safetyScore - a.safetyScore);
 
-  // Also sort by ETA to identify fastest
+  // Identify the safest route (highest safety score)
+  const safestId = scoredRoutes[0]?.id;
+
+  // Identify the fastest route (lowest ETA)
   const byEta = [...scoredRoutes].sort((a, b) => a.eta - b.eta);
-  const fastestId = byEta[0]?.id;
+  let fastestId = byEta[0]?.id;
+
+  // If safest and fastest are the same, pick the next fastest as "fastest"
+  // Or if there's only one route with that ETA, use the lowest safety score route
+  if (fastestId === safestId && scoredRoutes.length > 1) {
+    // Try to find a different route with a lower ETA or same ETA
+    const alternativeFastest = byEta.find(r => r.id !== safestId);
+    if (alternativeFastest) {
+      fastestId = alternativeFastest.id;
+    } else {
+      // All routes have same ETA, use lowest safety score as "fastest"
+      fastestId = scoredRoutes[scoredRoutes.length - 1]?.id;
+    }
+  }
 
   // Classify routes - ensure we have safest, fastest, and balanced (if 3+ routes)
-  return scoredRoutes.map((route, index) => {
+  return scoredRoutes.map((route) => {
     let type;
-    if (index === 0) {
+    if (route.id === safestId) {
       type = "safest";
     } else if (route.id === fastestId) {
-      type = "fastest";
-    } else if (index === scoredRoutes.length - 1 && scoredRoutes.length >= 2) {
-      // Last route (lowest safety score) is fastest if not already assigned
       type = "fastest";
     } else {
       type = "balanced";
