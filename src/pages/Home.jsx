@@ -28,6 +28,8 @@ import NightQuickStats from "../components/night/NightQuickStats";
 import StreetViewPreview from "../components/map/StreetViewPreview";
 import VoiceNavigator from "../components/navigation/VoiceNavigator";
 import useStreetActivity from "../hooks/useStreetActivity";
+import { base44 } from "@/api/base44Client";
+import { useMutation } from "@tanstack/react-query";
 
 // Montreal configuration - downtown area only for performance
 const montrealCenter = [45.5019, -73.5674];
@@ -132,6 +134,11 @@ function HomeContent() {
   });
 
   const { preferences, recordRouteSelection } = useUserPreferences();
+
+  // Log route history when route is selected
+  const logHistoryMutation = useMutation({
+    mutationFn: (historyData) => base44.entities.RouteHistory.create(historyData),
+  });
 
   // Auto-detect initial mode based on time
   const [mode, setMode] = useState(() => getRecommendedMode(montrealCenter[0]));
