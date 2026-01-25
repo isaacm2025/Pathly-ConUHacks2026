@@ -400,11 +400,6 @@ function HomeContent() {
     }
   }, [isDark, destination]);
 
-  // Log route history when route is selected in night mode
-  const logHistoryMutation = useMutation({
-    mutationFn: (historyData) => base44.entities.RouteHistory.create(historyData),
-  });
-
   const handleModeToggle = () => { setAutoModeEnabled(false); setMode(mode === "day" ? "night" : "day"); setSelectedPlace(null); };
   const handleFilterToggle = (filterId) => setActiveFilters(prev => prev.includes(filterId) ? prev.filter(f => f !== filterId) : [...prev, filterId]);
   const handleSafetyToggle = (toggleId) => setSafetyToggles(prev => prev.includes(toggleId) ? prev.filter(t => t !== toggleId) : [...prev, toggleId]);
