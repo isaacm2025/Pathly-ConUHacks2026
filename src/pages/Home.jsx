@@ -2,7 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import useLiveLocation from "../hooks/useLiveLocation";
 import { useUserPreferences, PreferencesProvider } from "../hooks/useUserPreferences";
 import { fetchNearbyPlaces, fetchNearbyPlacesFromGoogle } from "../api/pathlyApi";
-import { rankPlaces, calculateRouteSafetyScore, getSegmentColors, generateRouteDescription } from "../utils/ranking";
+import { rankPlaces } from "../utils/ranking";
+import {
+  fetchWalkingRoutes,
+  classifyRoutes,
+  getRouteSegmentColors,
+  generateDescription,
+} from "../utils/routingService";
 import { getRecommendedMode, getTimeContext } from "../utils/timeAware";
 import { motion, AnimatePresence } from "framer-motion";
 import TopBar from "../components/shared/TopBar";
@@ -84,28 +90,29 @@ function getMockPlaces() {
   ];
 }
 
-// Generate routes with safety scoring based on street activity
-function generateScoredRoutes(origin, destination, streetActivity, userPreferences) {
+// Generate fallback routes when Google API fails (simple interpolated paths)
+function generateFallbackRoutes(origin, destination, streetActivity, userPreferences) {
   if (!destination) return [];
   const [originLat, originLng] = origin;
   const destLat = destination.latitude;
   const destLng = destination.longitude;
 
+  // Calculate approximate distance and ETA
+  const distance = Math.sqrt(
+    Math.pow((destLat - originLat) * 111, 2) +
+    Math.pow((destLng - originLng) * 85, 2)
+  );
+  const baseEta = Math.round((distance / 5) * 60); // 5 km/h walking speed
+
   const directPath = [[originLat, originLng], [(originLat + destLat) / 2, (originLng + destLng) / 2], [destLat, destLng]];
-  const safePath = [[originLat, originLng], [originLat + 0.005, originLng - 0.005], [(originLat + destLat) / 2 + 0.003, (originLng + destLng) / 2], [destLat - 0.002, destLng + 0.003], [destLat, destLng]];
-  const balancedPath = [[originLat, originLng], [originLat + 0.002, originLng - 0.002], [(originLat + destLat) / 2, (originLng + destLng) / 2 + 0.002], [destLat, destLng]];
 
   const routes = [
-    { id: "1", type: "safest", path: safePath, eta: 14, baseSafetyScore: 90 },
-    { id: "2", type: "balanced", path: balancedPath, eta: 11, baseSafetyScore: 75 },
-    { id: "3", type: "fastest", path: directPath, eta: 8, baseSafetyScore: 60 },
+    { id: "1", type: "safest", path: directPath, eta: baseEta, baseSafetyScore: 70, description: "Route calculated (limited data)" },
   ];
 
   return routes.map(route => {
-    const safetyScore = calculateRouteSafetyScore(route, streetActivity, userPreferences);
-    const segmentColors = getSegmentColors(route, streetActivity, userPreferences);
-    const description = generateRouteDescription(route, streetActivity, userPreferences);
-    return { ...route, safetyScore: Math.round((route.baseSafetyScore + safetyScore) / 2), segmentColors, description };
+    const segmentColors = getRouteSegmentColors(route, streetActivity, userPreferences);
+    return { ...route, safetyScore: route.baseSafetyScore, segmentColors };
   });
 }
 
@@ -136,6 +143,7 @@ function HomeContent() {
   const [places, setPlaces] = useState([]);
   const [rankedPlaces, setRankedPlaces] = useState([]);
   const [routes, setRoutes] = useState([]);
+  const [isLoadingRoutes, setIsLoadingRoutes] = useState(false);
   const [destination, setDestination] = useState(null);
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [dayModeRoute, setDayModeRoute] = useState(null);
@@ -229,47 +237,120 @@ function HomeContent() {
     setRankedPlaces(ranked);
   }, [places, preferences, activeFilters]);
 
-  // Generate routes when destination changes
+  // Generate routes when destination changes - uses Google Directions API
   useEffect(() => {
-    if (destination && mode === "night") {
-      const scoredRoutes = generateScoredRoutes(scopedLocation, destination, streetActivity, preferences);
-      setRoutes(scoredRoutes);
-      setSelectedRouteId("1");
+    if (!destination || mode !== "night") {
+      setRoutes([]);
+      return;
     }
+
+    let cancelled = false;
+
+    async function fetchRoutes() {
+      setIsLoadingRoutes(true);
+      try {
+        // Fetch real walking routes from Google Directions API
+        const googleRoutes = await fetchWalkingRoutes(scopedLocation, destination);
+
+        if (cancelled) return;
+
+        // Classify routes by safety score
+        const classifiedRoutes = classifyRoutes(googleRoutes, streetActivity, preferences);
+
+        // Add segment colors and descriptions
+        const enrichedRoutes = classifiedRoutes.map(route => ({
+          ...route,
+          segmentColors: getRouteSegmentColors(route, streetActivity, preferences),
+          description: generateDescription(route, streetActivity),
+        }));
+
+        setRoutes(enrichedRoutes);
+        setSelectedRouteId(enrichedRoutes[0]?.id || "1");
+      } catch (error) {
+        console.error("Error fetching routes:", error);
+        // Fall back to simple routes if Google API fails
+        if (!cancelled) {
+          const fallbackRoutes = generateFallbackRoutes(scopedLocation, destination, streetActivity, preferences);
+          setRoutes(fallbackRoutes);
+          setSelectedRouteId("1");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingRoutes(false);
+        }
+      }
+    }
+
+    fetchRoutes();
+
+    return () => {
+      cancelled = true;
+    };
   }, [destination, scopedLocation, streetActivity, preferences, mode]);
 
-  // Generate route when place is selected in Day mode
+  // Generate route when place is selected in Day mode - uses Google Directions API
   useEffect(() => {
-    if (selectedPlace && mode === "day") {
-      const [originLat, originLng] = scopedLocation;
-      const destLat = selectedPlace.latitude;
-      const destLng = selectedPlace.longitude;
-
-      // Guard against missing coordinates
-      if (!destLat || !destLng) {
-        console.warn("Selected place missing coordinates:", selectedPlace);
-        setDayModeRoute(null);
-        return;
-      }
-
-      // Create a simple direct route path
-      const routePath = [
-        [originLat, originLng],
-        [originLat + (destLat - originLat) * 0.33, originLng + (destLng - originLng) * 0.33],
-        [originLat + (destLat - originLat) * 0.66, originLng + (destLng - originLng) * 0.66],
-        [destLat, destLng]
-      ];
-
-      setDayModeRoute({
-        id: "day-route",
-        type: "walking",
-        path: routePath,
-        eta: selectedPlace.eta_minutes,
-        destination: selectedPlace
-      });
-    } else {
+    if (!selectedPlace || mode !== "day") {
       setDayModeRoute(null);
+      return;
     }
+
+    const destLat = selectedPlace.latitude;
+    const destLng = selectedPlace.longitude;
+
+    // Guard against missing coordinates
+    if (!destLat || !destLng) {
+      console.warn("Selected place missing coordinates:", selectedPlace);
+      setDayModeRoute(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function fetchDayRoute() {
+      try {
+        const destination = { latitude: destLat, longitude: destLng };
+        const googleRoutes = await fetchWalkingRoutes(scopedLocation, destination);
+
+        if (cancelled || !googleRoutes.length) return;
+
+        // Use the first (usually fastest) route for day mode
+        const route = googleRoutes[0];
+        setDayModeRoute({
+          id: "day-route",
+          type: "walking",
+          path: route.path,
+          eta: route.eta,
+          distance: route.distanceText,
+          destination: selectedPlace
+        });
+      } catch (error) {
+        console.error("Error fetching day route:", error);
+        // Fallback to simple interpolated path
+        if (!cancelled) {
+          const [originLat, originLng] = scopedLocation;
+          const routePath = [
+            [originLat, originLng],
+            [originLat + (destLat - originLat) * 0.33, originLng + (destLng - originLng) * 0.33],
+            [originLat + (destLat - originLat) * 0.66, originLng + (destLng - originLng) * 0.66],
+            [destLat, destLng]
+          ];
+          setDayModeRoute({
+            id: "day-route",
+            type: "walking",
+            path: routePath,
+            eta: selectedPlace.eta_minutes,
+            destination: selectedPlace
+          });
+        }
+      }
+    }
+
+    fetchDayRoute();
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedPlace, scopedLocation, mode]);
 
   // Show safety alert periodically in night mode
@@ -465,14 +546,25 @@ function HomeContent() {
                   </div>
 
                   <div className="space-y-3 overflow-y-auto pr-1 -mr-1 flex-1">
-                    {routes.map((route) => (
-                      <RouteCard
-                        key={route.id}
-                        route={route}
-                        isSelected={selectedRouteId === route.id}
-                        onSelect={handleRouteSelect}
-                      />
-                    ))}
+                    {isLoadingRoutes ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-400"></div>
+                        <span className="ml-3 text-slate-400">Finding routes...</span>
+                      </div>
+                    ) : routes.length === 0 ? (
+                      <div className="text-center py-8 text-slate-400">
+                        No routes found. Try a different destination.
+                      </div>
+                    ) : (
+                      routes.map((route) => (
+                        <RouteCard
+                          key={route.id}
+                          route={route}
+                          isSelected={selectedRouteId === route.id}
+                          onSelect={handleRouteSelect}
+                        />
+                      ))
+                    )}
                   </div>
 
                   {/* Route Explanation */}
