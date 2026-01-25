@@ -476,19 +476,6 @@ function HomeContent() {
           >
             {/* Left Panel - Places */}
             <div className="w-[420px] flex flex-col flex-shrink-0">
-              {/* Time Context Header */}
-              <div className="mb-3 px-1">
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-slate-400">{timeContext.label}</span>
-                  {timeContext.suggestions.length > 0 && (
-                    <>
-                      <span className="text-slate-300">•</span>
-                      <span className="text-slate-500">Suggested: {timeContext.suggestions.slice(0, 2).join(", ")}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-
               <div className="mb-4">
                 <FilterChips
                   activeFilters={activeFilters}
