@@ -4,7 +4,11 @@ import { motion } from "framer-motion";
 import ParticleField from "../components/landing/ParticleField";
 import LogoReveal from "../components/landing/LogoReveal";
 import GetStartedButton from "../components/landing/GetStartedButton";
+import AudioButton from "../components/landing/AudioButton";
+import useElevenLabsTTS from "../hooks/useElevenLabsTTS";
 import { createPageUrl } from "../utils";
+
+const LANDING_TEXT = "Welcome to Pathly. Navigate your night with confidence and comfort.";
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -12,6 +16,7 @@ export default function Landing() {
   const [showButton, setShowButton] = useState(false);
   const [isDisintegrating, setIsDisintegrating] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
+  const { speak, stop, isLoading, isPlaying, error } = useElevenLabsTTS();
   
   useEffect(() => {
     // Check if user has already seen landing
@@ -36,11 +41,20 @@ export default function Landing() {
   
   const handleGetStarted = () => {
     setIsDisintegrating(true);
+    stop();
     
     // Show dashboard underneath after brief delay
     setTimeout(() => {
       setShowDashboard(true);
     }, 400);
+  };
+
+  const handleAudioClick = () => {
+    if (isPlaying) {
+      stop();
+    } else {
+      speak(LANDING_TEXT);
+    }
   };
   
   const handleDisintegrationComplete = () => {
@@ -79,6 +93,20 @@ export default function Landing() {
           isDisintegrating={isDisintegrating}
           onComplete={handleDisintegrationComplete}
         />
+        
+        {/* Audio Button */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: showButton ? 1 : 0 }}
+          transition={{ duration: 0.5 }}
+          className="absolute top-8 right-8 z-20"
+        >
+          <AudioButton
+            onClick={handleAudioClick}
+            isLoading={isLoading}
+            isPlaying={isPlaying}
+          />
+        </motion.div>
         
         {/* Logo & Brand */}
         <LogoReveal 

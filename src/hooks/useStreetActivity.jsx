@@ -113,7 +113,9 @@ export default function useStreetActivity({
   bounds,
   center,
   roadTypes = DEFAULT_ROAD_TYPES,
-} = {}) {
+} = { bounds: null, center: null, roadTypes: DEFAULT_ROAD_TYPES })
+
+{
   const [streetActivity, setStreetActivity] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);

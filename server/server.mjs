@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { connectDB } from "./db.mjs";
+import ttsRouter from "./routes/tts.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,6 +20,7 @@ if (!process.env.JWT_SECRET) {
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use("/api", ttsRouter);
 
 const db = await connectDB();
 const users = db.collection("users");
