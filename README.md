@@ -1,67 +1,130 @@
-# Pathly 🧭
+# 🧭 Pathly  
+### Navigate safely. Explore confidently.
 
-**Context-aware navigation for safer, smarter journeys**
+Pathly is a **context-aware navigation companion** designed to help people—especially university students—make **safer, more confident decisions** about where to go and how to get there, particularly at night.
 
-## Quick Start
-
-```bash
-npm install
-echo "VITE_GOOGLE_MAPS_API_KEY=your_key_here" > .env.local
-npm run dev
-```
-
-Open [http://localhost:5173](http://localhost:5173)
+Unlike traditional map applications that optimize only for speed, Pathly optimizes for **comfort, safety, and confidence**, combining real-time signals, AI insights, and natural voice guidance.
 
 ---
 
-## 🌞 Day Mode — Smart Place Discovery
+## 🌟 Why Pathly?
 
-### How Locations Are Found
-1. **Google Places API** searches nearby venues (1500m radius)
-2. **Time-based suggestions** recommend place types:
-   - Morning → cafe, breakfast
-   - Lunch → restaurant
-   - Evening → restaurant, gym
-   - Night → bar
+Finding the fastest route isn’t always the best choice—especially at night.
 
-### How Ranking Works
-Each place gets a score (0-100) based on:
+- Users don’t want to stare at maps while walking
+- Quiet or poorly lit streets can feel unsafe
+- Information overload increases anxiety
+- Accessibility is often overlooked
 
-| Factor | Weight | Logic |
-|--------|--------|-------|
-| Proximity | 40% | Closer = higher score |
-| Rating | 30% | Google stars normalized |
-| Crowd Level | 20% | Quieter = higher (based on preference) |
-| Open Now | 10% | Open = bonus |
-
-**Click any place** → Walking route appears on map
+**Pathly shifts navigation from “fastest” to “best for you, right now.”**
 
 ---
 
-## 🌙 Night Mode — Confidence Routing
+## 🚦 Core Features
 
-### How to Use
-1. Toggle to **Night** mode (top-left)
-2. Enter destination in the search bar
-3. Choose from 3 route options:
-   - 🛡️ **Safest** — Prioritizes busy, well-lit streets
-   - ⚖️ **Balanced** — Mix of safety and speed
-   - ⚡ **Fastest** — Shortest path
+### 🌤️ Day Mode — Smart Discovery
+Designed for exploration and productivity.
 
-### Street Activity Overlay
-- 🔴 **Red lines** = Busy streets (more foot traffic)
-- 🔵 **Blue lines** = Quieter streets
+- Ranked nearby places (cafés, libraries, gyms, coworking spaces)
+- Clear status indicators (not busy / moderate / busy)
+- Smooth map + list synchronization
+- Live updates and dynamic re-ranking
 
-Data sourced from OpenStreetMap in real-time.
+**Goal:** Help users quickly decide *where to go*.
 
 ---
 
-## Tech Stack
+### 🌙 Night Mode — Confidence-Focused Navigation
+Designed for safety and reassurance.
 
-React • Vite • TailwindCSS • Google Maps/Places/Directions APIs • OpenStreetMap
+- Multiple route options:
+  - 🛡️ Safest
+  - ⚖️ Balanced
+  - ⚡ Fastest
+- Visual street-level activity indicators
+- Clear explanations for route recommendations
+- Reduced visual clutter and calmer UI
+
+**Goal:** Help users feel confident *while getting there*.
 
 ---
 
-Built with ❤️ for safer urban navigation
+## 🎙️ Voice Guidance (ElevenLabs)
 
-# Updated on Mon Jan 26 11:52:39 EST 2026
+Pathly integrates **ElevenLabs** to provide **natural, human-like voice guidance**, especially in Night Mode.
+
+### Why voice?
+- Reduces screen dependency while walking
+- Lowers cognitive load
+- Improves accessibility (visually impaired users)
+- Builds reassurance through tone, not just data
+
+**Example voice message:**
+> “This route is slightly longer, but it has better lighting and more nearby activity.”
+
+Voice transforms Pathly from a map into a **companion**.
+
+---
+
+## 🧠 AI-Assisted Insights
+
+Pathly uses AI to:
+- Explain *why* a place or route is recommended
+- Adapt suggestions based on time of day
+- Support decision-making without overwhelming users
+
+All AI outputs are **explainable, contextual, and user-centric**.
+
+---
+
+## 🗺️ Visual Street Activity
+
+Instead of crime data or assumptions, Pathly uses **street-level activity proxies**:
+- Nearby points of interest
+- Road type and connectivity
+- Human presence indicators
+
+Street segments are visualized using intuitive color gradients—especially useful in Night Mode.
+
+---
+
+## 🧑‍🤝‍🧑 Community & Rewards (Optional)
+
+Pathly includes optional Web3 features powered by **Solana**:
+- Wallet-based tipping for helpful reports
+- Rewards for community contributions
+- Lightweight, transparent incentive layer
+
+---
+
+## 🧱 Tech Stack
+
+### Frontend
+- React + Vite
+- @react-google-maps/api
+- Tailwind CSS
+- Framer Motion
+
+### Backend
+- Node.js / Express
+- MongoDB Atlas
+
+### APIs & Services
+- Google Maps & Places API — maps, routing, POIs
+- ElevenLabs API — high-quality text-to-speech
+- MongoDB — live data (users, places, routes, signals)
+- Solana Web3 — optional rewards & tipping
+- OpenStreetMap / Overpass — street network data
+
+---
+
+## 🗄️ Data Architecture
+
+```text
+Frontend (React + Maps)
+        ↓
+Backend API (Node / Express)
+        ↓
+MongoDB (live app state)
+        ↓ (async / analytics)
+Snowflake (optional analytics layer)
