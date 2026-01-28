@@ -5,7 +5,7 @@ Pathly is a **context-aware navigation companion** designed to help people—esp
 
 Unlike traditional map applications that optimize only for speed, Pathly optimizes for **comfort, safety, and confidence**, combining real-time signals, AI insights, and natural voice guidance.
 
-Devpost:
+### Devpost: 
 https://devpost.com/software/pathly-254xnw?ref_content=user-portfolio&ref_feature=in_progress
 ---
 
