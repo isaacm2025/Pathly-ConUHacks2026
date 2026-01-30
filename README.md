@@ -27,7 +27,7 @@ Finding the fastest route isn’t always the best choice—especially at night.
 Designed for exploration and productivity.
 
 - Ranked nearby places (cafés, libraries, gyms, coworking spaces)
-- Clear status indicators (not busy / moderate / busy)
+- Clear status indicators (not busy/moderate / busy)
 - Smooth map + list synchronization
 - Live updates and dynamic re-ranking
 
